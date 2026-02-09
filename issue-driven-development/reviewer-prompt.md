@@ -35,10 +35,24 @@ Task tool (general-purpose):
        - Regressions or broken existing behavior
        - Code quality issues (but don't nitpick style)
        - Security concerns
+    6. **Check test coverage** (see below)
+
+    ## Test Coverage Check (REQUIRED)
+
+    The plan specifies tests that must be written. You MUST verify:
+    - Were all planned tests actually written?
+    - Do the tests verify the FIX (not just absence of regressions)?
+    - Would the tests FAIL if the fix were reverted?
+    - Are the tests meaningful (not just smoke tests)?
+
+    If the plan specified tests and they were not written, REJECT.
+    "All existing tests pass" is not a substitute for new tests that
+    verify the specific behavior being fixed.
 
     ## Report Format
 
     - **Tests**: PASS/FAIL (paste output)
+    - **Test coverage**: Were planned tests written? Do they verify the fix?
     - **Plan compliance**: Does implementation match the plan?
       - Missing: [list anything from plan not implemented]
       - Extra: [list anything implemented but not in plan]

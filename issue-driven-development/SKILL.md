@@ -82,6 +82,7 @@ Dispatch a `general-purpose` subagent with the issue text. Use `./planner-prompt
 - Reads relevant source files referenced in the issue
 - Explores surrounding code for context
 - Produces a concrete plan: what to change, where, and why
+- Specifies what tests to write (REQUIRED — see below)
 - Does NOT write any code
 
 Present the plan to the user. If rejected, dispatch a new planner with feedback.
@@ -90,16 +91,18 @@ Present the plan to the user. If rejected, dispatch a new planner with feedback.
 
 Dispatch a `general-purpose` subagent with the approved plan text (not a file path). Use `./implementer-prompt.md` template. The implementer:
 - Receives the full plan text and issue context
+- Writes the tests specified in the plan FIRST
 - Implements exactly what the plan specifies
-- Runs tests (`npm test`)
+- Runs all tests (`npm test`) — new tests should now pass
 - Does NOT commit (controller handles that after review)
-- Reports what was changed and test results
+- Reports what was changed, what tests were written, and test results
 
 ### 4. Review (fresh subagent)
 
 Dispatch a `general-purpose` subagent to review the implementation. Use `./reviewer-prompt.md` template. The reviewer:
 - Reads the git diff of uncommitted changes
 - Compares implementation against the plan and original issue
+- Verifies planned tests were written and actually test the fix
 - Runs tests independently
 - Checks for regressions, missed requirements, over-engineering
 - Reports pass/fail with specific issues
@@ -119,11 +122,15 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 - **Never let the implementer commit** — the controller commits after review passes
 - **Each subagent gets a fresh context** — no resuming previous agents
 - **Run tests in every phase** that touches code (implement and review)
+- **Plan must specify tests, implementer must write them, reviewer must check them**
 - **One issue at a time** — finish completely before moving to the next
 
 ## Red Flags
 
 - Implementing without a plan (skip phase 2)
+- Plan without a concrete Tests section
+- Implementer skipping test-writing ("existing tests pass" is not enough)
+- Reviewer not checking whether planned tests were written
 - Reviewer trusting implementer's report instead of reading the diff
 - Committing before review passes
 - Moving to next issue with failing tests
