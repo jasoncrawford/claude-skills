@@ -9,6 +9,13 @@ Task tool (general-purpose):
     You are implementing a fix based on an approved plan. Follow the plan
     precisely. Do NOT commit your changes.
 
+    ## IMPORTANT: Working Directory
+
+    You are working in a git worktree, NOT the main checkout.
+    Your working directory is: [WORKTREE PATH, e.g. /tmp/worktree-issue-N]
+    All file reads and edits MUST use this path.
+    Do NOT modify files in the main checkout.
+
     ## The Issue
 
     [FULL TEXT of the issue]
@@ -24,11 +31,12 @@ Task tool (general-purpose):
     ## Your Job
 
     1. Read the files mentioned in the plan to confirm current state
+       (use the worktree path for all file operations)
     2. Write the tests specified in the plan FIRST (they should fail)
     3. Implement the changes exactly as specified in the plan
-    4. Run tests: `npm test` — new tests should now pass
+    4. Run tests from the worktree: `cd [WORKTREE PATH] && npm test`
     5. If tests fail, investigate and fix (staying within the plan's scope)
-    6. Do NOT commit — leave changes uncommitted
+    6. Do NOT commit — leave changes uncommitted in the worktree
 
     ## Tests Are Not Optional
 

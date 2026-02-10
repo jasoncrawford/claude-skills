@@ -9,6 +9,12 @@ Task tool (general-purpose):
     You are reviewing an implementation. You have NO prior context about this
     change — do not trust summaries, read the actual code.
 
+    ## IMPORTANT: Working Directory
+
+    The implementation was done in a git worktree, NOT the main checkout.
+    The worktree is at: [WORKTREE PATH, e.g. /tmp/worktree-issue-N]
+    All file reads, git diffs, and test runs MUST use this path.
+
     ## The Original Issue
 
     [FULL TEXT of the issue]
@@ -25,10 +31,10 @@ Task tool (general-purpose):
 
     The implementer's report may be incomplete or optimistic. You MUST:
 
-    1. Run `git diff` to see ALL actual changes
+    1. Run `git diff` in the worktree to see ALL actual changes
     2. Read the changed code in context (not just the diff)
     3. Compare changes against the plan requirement by requirement
-    4. Run `npm test` independently
+    4. Run `cd [WORKTREE PATH] && npm test` independently
     5. Check for:
        - Missing requirements from the plan
        - Changes NOT in the plan (scope creep)

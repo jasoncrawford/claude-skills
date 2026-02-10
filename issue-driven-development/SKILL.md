@@ -70,6 +70,33 @@ digraph process {
 }
 ```
 
+## Git Worktree Isolation
+
+**Every subagent that writes code MUST work in a git worktree**, not the main checkout. This prevents conflicts when running agents in the background or in parallel.
+
+### Setup (controller does this before dispatching implementer)
+
+```bash
+# Create a branch and worktree for the issue
+git branch issue-N-short-description main
+git worktree add /tmp/worktree-issue-N issue-N-short-description
+```
+
+### Teardown (controller does this after commit/merge)
+
+```bash
+# After merging the branch back to main
+git worktree remove /tmp/worktree-issue-N
+git branch -d issue-N-short-description
+```
+
+### What this means for each phase
+
+- **Planner**: Reads from the main checkout (read-only) — no worktree needed
+- **Implementer**: Works in the worktree — all file paths in the prompt must use the worktree path
+- **Reviewer**: Reads from the worktree — git diff and tests run from the worktree path
+- **Finalize**: Controller merges the worktree branch into main, then cleans up
+
 ## Phase Details
 
 ### 1. Select Issue (controller does this directly)
@@ -79,7 +106,7 @@ Read the issues file. Pick the highest-priority unresolved issue (by section ord
 ### 2. Plan (fresh subagent)
 
 Dispatch a `general-purpose` subagent with the issue text. Use `./planner-prompt.md` template. The planner:
-- Reads relevant source files referenced in the issue
+- Reads relevant source files referenced in the issue (from main checkout)
 - Explores surrounding code for context
 - Produces a concrete plan: what to change, where, and why
 - Specifies what tests to write (REQUIRED — see below)
@@ -89,17 +116,19 @@ Present the plan to the user. If rejected, dispatch a new planner with feedback.
 
 ### 3. Implement (fresh subagent)
 
-Dispatch a `general-purpose` subagent with the approved plan text (not a file path). Use `./implementer-prompt.md` template. The implementer:
+Create a git worktree for this issue (see above). Then dispatch a `general-purpose` subagent with the approved plan text (not a file path). Use `./implementer-prompt.md` template. The implementer:
+- Works in the worktree directory, NOT the main checkout
 - Receives the full plan text and issue context
 - Writes the tests specified in the plan FIRST
 - Implements exactly what the plan specifies
-- Runs all tests (`npm test`) — new tests should now pass
+- Runs all tests (`npm test`) from the worktree — new tests should now pass
 - Does NOT commit (controller handles that after review)
 - Reports what was changed, what tests were written, and test results
 
 ### 4. Review (fresh subagent)
 
 Dispatch a `general-purpose` subagent to review the implementation. Use `./reviewer-prompt.md` template. The reviewer:
+- Works in the worktree directory to read diffs and run tests
 - Reads the git diff of uncommitted changes
 - Compares implementation against the plan and original issue
 - Verifies planned tests were written and actually test the fix
@@ -111,14 +140,17 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 
 ### 5. Finalize (controller does this directly)
 
+- Commit changes in the worktree branch
+- Merge the worktree branch into main (fast-forward or merge commit)
 - Update the issues file (strikethrough title, add "FIXED" and commit hash)
-- Commit all changes with a descriptive message
+- Remove the worktree and delete the branch
 - Ask user if they want to continue to the next issue
 
 ## Key Rules
 
 - **Never skip the user approval gate** after issue selection and after planning
 - **Never pass file paths to subagents** — pass the full text content
+- **Always use a git worktree for implementation** — never modify the main checkout
 - **Never let the implementer commit** — the controller commits after review passes
 - **Each subagent gets a fresh context** — no resuming previous agents
 - **Run tests in every phase** that touches code (implement and review)
@@ -134,4 +166,5 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 - Reviewer trusting implementer's report instead of reading the diff
 - Committing before review passes
 - Moving to next issue with failing tests
+- Implementer or reviewer working in the main checkout instead of a worktree
 - Controller doing implementation work instead of delegating to subagent
