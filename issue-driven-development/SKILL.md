@@ -82,10 +82,21 @@ git branch issue-N-short-description main
 git worktree add /tmp/worktree-issue-N issue-N-short-description
 ```
 
-### Teardown (controller does this after commit/merge)
+### Merge (controller does this after review passes)
 
 ```bash
-# After merging the branch back to main
+# Rebase against main to resolve any conflicts before merging
+cd /tmp/worktree-issue-N
+git rebase main
+
+# Merge with --no-ff to preserve branch history as a merge commit
+cd /path/to/main/checkout
+git merge --no-ff issue-N-short-description
+```
+
+### Teardown (controller does this after merge)
+
+```bash
 git worktree remove /tmp/worktree-issue-N
 git branch -d issue-N-short-description
 ```
@@ -95,7 +106,7 @@ git branch -d issue-N-short-description
 - **Planner**: Reads from the main checkout (read-only) — no worktree needed
 - **Implementer**: Works in the worktree — all file paths in the prompt must use the worktree path
 - **Reviewer**: Reads from the worktree — git diff and tests run from the worktree path
-- **Finalize**: Controller merges the worktree branch into main, then cleans up
+- **Finalize**: Controller rebases branch against main, merges with `--no-ff`, then cleans up
 
 ## Phase Details
 
@@ -141,7 +152,8 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 ### 5. Finalize (controller does this directly)
 
 - Commit changes in the worktree branch
-- Merge the worktree branch into main (fast-forward or merge commit)
+- Rebase the branch against main (resolve conflicts if any)
+- Merge into main with `--no-ff` (preserves branch as a merge commit)
 - Update the issues file (strikethrough title, add "FIXED" and commit hash)
 - Remove the worktree and delete the branch
 - Ask user if they want to continue to the next issue
