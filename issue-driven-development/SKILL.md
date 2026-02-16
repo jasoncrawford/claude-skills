@@ -1,15 +1,15 @@
 ---
 name: issue-driven-development
-description: Use when working through issues from an issues file sequentially - picks highest-priority unresolved issue, plans, implements, reviews, and commits in isolated subagent contexts
+description: Use when working through GitHub issues sequentially - picks highest-priority open issue, plans, implements, reviews, and commits in isolated subagent contexts
 ---
 
 # Issue-Driven Development
 
-Sequentially resolve issues from a tracker file. Each phase runs in a fresh subagent to prevent context bias.
+Sequentially resolve GitHub issues. Each phase runs in a fresh subagent to prevent context bias.
 
 ## When to Use
 
-- You have an issues file (ISSUES.md, BUGS.md, TODO.md) with multiple unresolved issues
+- You have open GitHub issues to work through
 - You want to work through them one at a time, highest priority first
 - You want planning, implementation, and review isolated from each other
 
@@ -112,7 +112,7 @@ git branch -d issue-N-short-description
 
 ### 1. Select Issue (controller does this directly)
 
-Read the issues file. Pick the highest-priority unresolved issue (by section order: Critical > High > Medium > Lower). Present the issue to the user and get approval before proceeding.
+Run `gh issue list --state open --label <label>` to find open issues. Prioritize by label: `security` > `bug` > `tech-debt` > unlabeled. Within a priority level, pick the lowest-numbered issue. Use `gh issue view <number>` to get the full description. Present the issue to the user and get approval before proceeding.
 
 ### 2. Plan (fresh subagent)
 
@@ -154,7 +154,7 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 - Commit changes in the worktree branch
 - Rebase the branch against main (resolve conflicts if any)
 - Merge into main with `--no-ff` (preserves branch as a merge commit)
-- Update the issues file (strikethrough title, add "FIXED" and commit hash)
+- Close the GitHub issue with a comment noting the merge commit hash: `gh issue close <number> --comment "Fixed in <commit-hash>"`
 - Remove the worktree and delete the branch
 - Ask user if they want to continue to the next issue
 

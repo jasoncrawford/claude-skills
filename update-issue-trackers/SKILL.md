@@ -1,22 +1,28 @@
 ---
 name: update-issue-trackers
-description: Use when fixing a bug that is tracked in an issues file (ISSUES.md, TODO.md, BUGS.md) - ensures issue entries are updated when resolved
+description: Use when fixing a bug tracked in GitHub Issues - ensures the issue is closed with a comment when resolved
 ---
 
 # Update Issue Trackers
 
 ## Overview
 
-When fixing a bug tracked in an issues file, update the entry to mark it fixed with the commit hash. Don't leave stale tracking behind.
+When fixing a bug tracked in GitHub Issues, close the issue with a comment noting the commit hash. Don't leave stale issues open.
 
 ## Applies When
 
-- You read an issues file during the session
-- Your fix addresses a tracked issue, even partially
+- Your fix addresses a tracked GitHub issue, even partially
 - You discover a tracked issue was already fixed or not actually an issue
+- A commit message references `fixes #N` or `closes #N`
+
+## Actions
+
+- Close the issue: `gh issue close <number> --comment "Fixed in <commit-hash>"`
+- If only partially fixed, add a comment instead: `gh issue comment <number> --body "Partially addressed in <commit-hash>: <what was done>"`
+- If not actually an issue, close with explanation: `gh issue close <number> --reason "not planned" --comment "<explanation>"`
 
 ## Not Acceptable
 
-- Fixing the code but forgetting to update the tracker
-- "I'll update it later"
-- Leaving entries marked as open when they're resolved
+- Fixing the code but forgetting to close the issue
+- "I'll close it later"
+- Leaving issues open when they're resolved

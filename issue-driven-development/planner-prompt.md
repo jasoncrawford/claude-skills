@@ -11,7 +11,7 @@ Task tool (general-purpose):
 
     ## The Issue
 
-    [FULL TEXT of the issue from the issues file, including file references]
+    [FULL TEXT of the GitHub issue, including file references]
 
     ## Project Context
 
