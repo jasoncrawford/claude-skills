@@ -96,20 +96,16 @@ git worktree add /tmp/worktree-issue-N issue-N-short-description
 ### Merge (controller does this after user accepts)
 
 ```bash
-# Rebase against main to resolve any conflicts before merging
-cd /tmp/worktree-issue-N
-git rebase main
-
-# Merge with --no-ff to preserve branch history as a merge commit
-cd /path/to/main/checkout
-git merge --no-ff issue-N-short-description
+# Merge via GitHub PR (auto-merges when CI passes, deletes branch)
+gh pr merge <PR-number> --merge --auto --delete-branch
 ```
 
-### Teardown (controller does this after merge)
+### Teardown (controller does this after setting auto-merge)
 
 ```bash
 git worktree remove /tmp/worktree-issue-N
-git branch -d issue-N-short-description
+# Remote branch is deleted by --delete-branch; local branch cleaned up here
+git branch -d issue-N-short-description 2>/dev/null
 ```
 
 ### What this means for each phase
@@ -118,7 +114,7 @@ git branch -d issue-N-short-description
 - **Implementer**: Works in the worktree — all file paths in the prompt must use the worktree path
 - **Reviewer**: Reads from the worktree — git diff and tests run from the worktree path
 - **PR + User Acceptance**: Controller commits, pushes branch, creates PR, waits for user sign-off
-- **Finalize**: Controller rebases branch against main, merges with `--no-ff`, then cleans up
+- **Finalize**: Controller merges PR via `gh pr merge --auto`, cleans up worktree
 
 ## Phase Details
 
@@ -176,11 +172,10 @@ After code review passes, the user must try the feature before it merges:
 
 ### 6. Finalize (controller does this directly)
 
-- Rebase branch against main (resolve conflicts if any)
-- Merge into main with `--no-ff` (preserves branch as a merge commit)
-- Push main
-- Close the GitHub issue with a comment noting the merge commit hash: `gh issue close <number> --comment "Fixed in <commit-hash>"`
-- Remove the worktree and delete the branch
+- Merge PR via `gh pr merge <PR-number> --merge --auto --delete-branch` (merges when CI passes)
+- GitHub auto-closes the issue if the commit message contains `fixes #N`
+- Remove the worktree and delete the local branch
+- Pull main to sync: `git pull origin main`
 - Ask user if they want to continue to the next issue
 
 ## Key Rules
