@@ -37,8 +37,13 @@ digraph process {
     "Review passes?" [shape=diamond];
     "Fix subagent addresses review issues" [shape=box];
 
-    "5. Finalize" [shape=box];
-    "Update issues file, commit" [shape=box];
+    "5. PR + User Acceptance" [shape=box style=filled fillcolor=lightyellow];
+    "Commit, push branch, create PR" [shape=box];
+    "User tests feature on branch" [shape=box];
+    "User approves?" [shape=diamond];
+
+    "6. Finalize" [shape=box];
+    "Merge PR, close issue, clean up" [shape=box];
     "More issues?" [shape=diamond];
     "Done" [shape=box style=filled fillcolor=lightgray];
 
@@ -59,12 +64,18 @@ digraph process {
 
     "4. Review (fresh subagent)" -> "Subagent reviews diff, runs tests, checks quality";
     "Subagent reviews diff, runs tests, checks quality" -> "Review passes?";
-    "Review passes?" -> "5. Finalize" [label="yes"];
+    "Review passes?" -> "5. PR + User Acceptance" [label="yes"];
     "Review passes?" -> "Fix subagent addresses review issues" [label="no"];
     "Fix subagent addresses review issues" -> "4. Review (fresh subagent)" [label="re-review"];
 
-    "5. Finalize" -> "Update issues file, commit";
-    "Update issues file, commit" -> "More issues?";
+    "5. PR + User Acceptance" -> "Commit, push branch, create PR";
+    "Commit, push branch, create PR" -> "User tests feature on branch";
+    "User tests feature on branch" -> "User approves?";
+    "User approves?" -> "6. Finalize" [label="yes"];
+    "User approves?" -> "Fix subagent addresses review issues" [label="no, fix issues"];
+
+    "6. Finalize" -> "Merge PR, close issue, clean up";
+    "Merge PR, close issue, clean up" -> "More issues?";
     "More issues?" -> "1. Select issue" [label="yes"];
     "More issues?" -> "Done" [label="no"];
 }
@@ -82,7 +93,7 @@ git branch issue-N-short-description main
 git worktree add /tmp/worktree-issue-N issue-N-short-description
 ```
 
-### Merge (controller does this after review passes)
+### Merge (controller does this after user accepts)
 
 ```bash
 # Rebase against main to resolve any conflicts before merging
@@ -106,6 +117,7 @@ git branch -d issue-N-short-description
 - **Planner**: Reads from the main checkout (read-only) — no worktree needed
 - **Implementer**: Works in the worktree — all file paths in the prompt must use the worktree path
 - **Reviewer**: Reads from the worktree — git diff and tests run from the worktree path
+- **PR + User Acceptance**: Controller commits, pushes branch, creates PR, waits for user sign-off
 - **Finalize**: Controller rebases branch against main, merges with `--no-ff`, then cleans up
 
 ## Phase Details
@@ -149,18 +161,31 @@ Dispatch a `general-purpose` subagent to review the implementation. Use `./revie
 
 If review fails, dispatch a fix subagent with the review feedback, then re-review.
 
-### 5. Finalize (controller does this directly)
+### 5. PR + User Acceptance (controller does this directly)
+
+After code review passes, the user must try the feature before it merges:
 
 - Commit changes in the worktree branch
-- Rebase the branch against main (resolve conflicts if any)
+- Push branch to remote
+- Create a PR via `gh pr create`
+- **Present the PR to the user and ask them to review/test the feature**
+- Wait for user approval before proceeding to finalize
+- If the user requests changes, dispatch a fix subagent, then re-review (phase 4)
+
+**Do NOT merge without user sign-off.** The user is the PM — they decide when a feature is ready to ship.
+
+### 6. Finalize (controller does this directly)
+
+- Rebase branch against main (resolve conflicts if any)
 - Merge into main with `--no-ff` (preserves branch as a merge commit)
+- Push main
 - Close the GitHub issue with a comment noting the merge commit hash: `gh issue close <number> --comment "Fixed in <commit-hash>"`
 - Remove the worktree and delete the branch
 - Ask user if they want to continue to the next issue
 
 ## Key Rules
 
-- **Never skip the user approval gate** after issue selection and after planning
+- **Never skip the user approval gate** after issue selection, after planning, and before merging
 - **Never pass file paths to subagents** — pass the full text content
 - **Always use a git worktree for implementation** — never modify the main checkout
 - **Never let the implementer commit** — the controller commits after review passes
@@ -177,6 +202,7 @@ If review fails, dispatch a fix subagent with the review feedback, then re-revie
 - Reviewer not checking whether planned tests were written
 - Reviewer trusting implementer's report instead of reading the diff
 - Committing before review passes
+- Merging before the user has tested and approved the feature
 - Moving to next issue with failing tests
 - Implementer or reviewer working in the main checkout instead of a worktree
 - Controller doing implementation work instead of delegating to subagent
