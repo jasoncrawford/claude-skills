@@ -189,6 +189,18 @@ After code review passes, the user must try the feature before it merges:
 - **Plan must specify tests, implementer must write them, reviewer must check them**
 - **One issue at a time** — finish completely before moving to the next
 
+## Batching Multiple Issues
+
+Batch multiple **small, related** issues into one branch/PR to avoid sequential rebase+CI cycles from branch protection. Use one commit per issue for clean history.
+
+**Batch when:**
+- Issues are small AND related (same review category)
+- Examples: several internal refactors, a group of dead code removals, related bug fixes
+
+**Split into separate PRs when:**
+- Issues cross review categories — UX/behavior changes need their own PR (user must review/test), internal refactors can merge without manual review
+- The combined PR would be too large — prefer multiple parallel PRs over one giant PR
+
 ## Red Flags
 
 - Implementing without a plan (skip phase 2)
