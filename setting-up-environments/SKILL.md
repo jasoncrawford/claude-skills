@@ -94,6 +94,22 @@ Your test runner loads `.env.test`. Your dev server loads `.env`. Production rea
 5. **Update test scripts** to explicitly load `.env.test` (e.g., `env-cmd -f .env.test`)
 6. **Verify isolation** — run tests, then check your dev database. If test data leaked, your isolation is broken.
 
+## Preview Environments (Per-PR Branches)
+
+Some stacks support automatic per-PR preview environments with isolated databases. For example, Supabase Branching creates a dedicated database instance for each Git branch, paired with Vercel's preview deploys.
+
+This gives you a fourth environment type:
+
+| Environment | Purpose | Checked into git? | Where config lives |
+|-------------|---------|-------------------|-------------------|
+| **preview** | Per-PR testing with isolated data | Yes (seed file) | Managed by platform (auto-provisioned) |
+
+Preview environments are seeded from a seed file (e.g., `supabase/seed.sql`) that creates test users and sample data. The seed runs once on branch creation — not on every push. To re-seed, reset the branch from the platform dashboard.
+
+**Key principle:** Preview environments follow the same isolation rules as test — they get their own database instance with throwaway data, never sharing state with dev or production.
+
+For Supabase-specific setup details (GitHub integration config, seed file format, gotchas), see the **vercel-supabase-stack** skill.
+
 ## Common Mistakes
 
 | Mistake | Fix |

@@ -213,6 +213,74 @@ define: {
 
 These become global constants replaced at build time. The frontend never reads `process.env` directly.
 
+## Supabase Branching (Preview Environments)
+
+Supabase Branching creates an isolated database for each PR branch, paired with Vercel's preview deploys. Each preview gets its own Supabase instance with migrations applied and seed data loaded.
+
+### GitHub Integration Setup
+
+In the Supabase dashboard under **Project Settings > Integrations > GitHub**:
+
+- **Supabase directory** must be set to `.` (the repo root), NOT `supabase`. The setting means "the directory that *contains* your `supabase/` folder." Setting it to `supabase` causes path doubling — the system looks for `supabase/supabase/seed.sql` instead of `supabase/seed.sql`.
+- Enable **Automatic branching** to create Supabase branches for each Git branch.
+
+### Seed File for Preview Data
+
+Create `supabase/seed.sql` to populate preview branches with test data. This runs automatically when a branch database is created or reset.
+
+**Key requirements for seeding auth users:**
+
+```sql
+-- Use extensions-qualified functions — pgcrypto is not in the default search_path
+INSERT INTO auth.users (
+  id, instance_id, aud, role, email, encrypted_password,
+  email_confirmed_at, last_sign_in_at,
+  raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token
+) VALUES (
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated',
+  'test@example.com',
+  extensions.crypt('test00', extensions.gen_salt('bf')),  -- NOT crypt(), must qualify
+  now(), now(),
+  '{"provider": "email", "providers": ["email"]}', '{}',
+  now(), now(), '', '', '', ''
+);
+
+-- auth.identities row is REQUIRED for login to work
+INSERT INTO auth.identities (
+  id, user_id, identity_data, provider, provider_id,
+  last_sign_in_at, created_at, updated_at
+) VALUES (
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  '{"sub": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "email": "test@example.com"}',
+  'email', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  now(), now(), now()
+);
+```
+
+**Critical rules:**
+- Use `extensions.crypt()` and `extensions.gen_salt()` — the `pgcrypto` extension exists but isn't in the search path during seeding.
+- Use plain INSERTs, NOT `DO $$` blocks — errors inside `DO` blocks are swallowed silently.
+- Both `auth.users` and `auth.identities` rows are required — without the identity row, login fails silently.
+- Include `confirmation_token`, `email_change`, `email_change_token_new`, `recovery_token` as empty strings.
+
+### config.toml Compatibility
+
+The branching CLI may not support all config keys that `supabase init` generates. Known unsupported keys:
+- `health_timeout` under `[db]` — remove it (only needed for local Docker startup).
+
+If you see `failed to parse config: 'db' has invalid keys:`, remove the offending key.
+
+### Branching Behavior
+
+- **Seed runs once** on branch creation or reset — not on every push. To re-seed, reset the branch from the Supabase dashboard.
+- **Config changes** are compared against the deployed state. "Remote DB config is up to date" means no diff, not that it re-read the config.
+- `sql_paths` in `[db.seed]` is ignored by the branching system — it uses a hardcoded default path. Keep `sql_paths = ["./seed.sql"]` for local `supabase db reset` compatibility.
+
 ## Gotchas
 
 | Issue | Cause | Fix |
@@ -224,6 +292,10 @@ These become global constants replaced at build time. The frontend never reads `
 | Realtime not working locally | Table not added to realtime publication | Add `ALTER PUBLICATION supabase_realtime ADD TABLE your_table;` to migration |
 | Deploy works but API returns 500 | Missing env vars in Vercel dashboard | Check all required vars are set for the Production environment |
 | Supabase project pauses on free tier | No activity for 7 days | Visit the dashboard to unpause; set a reminder if tests depend on cloud |
+| Branching seed file not found (`supabase/supabase/seed.sql`) | GitHub integration "Supabase directory" set to `supabase` instead of `.` | Change to `.` in Project Settings > Integrations > GitHub |
+| Branching config parse error (`invalid keys`) | `health_timeout` or other newer config keys not supported by branching CLI | Remove the unsupported key from `config.toml` |
+| Seed runs but login fails silently | `crypt()`/`gen_salt()` not in search path, or `DO $$` block swallowing errors | Use `extensions.crypt()`, plain INSERTs, and include `auth.identities` row |
+| Seed data not updating after push | Seed only runs on branch creation/reset | Reset the branch from Supabase dashboard |
 
 ## Deployment Checklist
 
@@ -236,3 +308,6 @@ These become global constants replaced at build time. The frontend never reads `
 - [ ] Realtime enabled for tables that need subscriptions
 - [ ] Test schema created (if using schema-based test isolation)
 - [ ] Auto-deploy on push to main configured
+- [ ] Supabase Branching: GitHub integration "Supabase directory" set to `.`
+- [ ] Supabase Branching: `seed.sql` uses `extensions.crypt()` and plain INSERTs
+- [ ] Supabase Branching: `config.toml` has no unsupported keys (e.g., `health_timeout`)
