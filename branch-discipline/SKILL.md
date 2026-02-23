@@ -43,6 +43,30 @@ git worktree remove /tmp/worktree-short-description
 git branch -d short-description
 ```
 
+## Always Use Worktrees
+
+**Every branch MUST have its own worktree.** Never work on a branch by switching branches in the main checkout with `git checkout` or `git switch`. This is the single most important rule after "main is read-only."
+
+Why:
+- **Switching branches in a shared working directory causes cross-contamination** — uncommitted changes bleed between branches, the index gets confused, and you end up debugging git instead of shipping code
+- **Worktrees are fully isolated** — each branch gets its own working directory with its own files and index, so nothing can interfere
+- **The main checkout stays pristine** — always pointing at main, always clean, always available to start new work or read reference code
+
+If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Create a worktree instead.
+
+## Never Cherry-Pick or Force-Push
+
+**`git cherry-pick` and `git push --force` (including `--force-with-lease`) are anti-patterns. Do not use them.**
+
+- **Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
+- **Force-push** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
+
+Both are symptoms of the same root problem: working without proper worktree isolation, then trying to fix the resulting mess with dangerous git operations. If you use worktrees correctly, you will never need either one.
+
+**What to do instead:**
+- Need to rebase? That's fine — `git rebase main` in a worktree, then `git push` (which works because no one else is force-pushing to your branch)
+- Got into a bad state? Ask the user before taking destructive action. Explain what went wrong and propose a safe fix.
+
 ## Branch Naming
 
 Keep it short and descriptive. Use the work being done, not metadata:
@@ -84,9 +108,12 @@ When working on several things at once (common with AI agents):
 
 ```bash
 cd /tmp/worktree-my-branch
-git rebase main
-git push --force-with-lease
+git fetch origin main
+git rebase origin/main
+git push
 ```
+
+Note: `git push` (no `--force`) works here because your branch's worktree is isolated — no one else is pushing to your feature branch, so the rebase doesn't cause a conflict with the remote. If `git push` is rejected, something unexpected happened — investigate rather than force-pushing.
 
 ## What Belongs on a Branch
 
