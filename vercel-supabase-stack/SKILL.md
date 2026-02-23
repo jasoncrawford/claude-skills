@@ -222,6 +222,7 @@ Supabase Branching creates an isolated database for each PR branch, paired with 
 In the Supabase dashboard under **Project Settings > Integrations > GitHub**:
 
 - **Supabase directory** must be set to `.` (the repo root), NOT `supabase`. The setting means "the directory that *contains* your `supabase/` folder." Setting it to `supabase` causes path doubling — the system looks for `supabase/supabase/seed.sql` instead of `supabase/seed.sql`.
+- **"Deploy to production"** must be **ON** ("Deploy changes to production on push including PR merges"). Without this, migrations only apply to branch databases — the production database never receives new migrations when PRs merge. This caused a production outage: a new column was never added to production, queries referencing it silently returned null, and the page appeared empty despite data existing.
 - Enable **Automatic branching** to create Supabase branches for each Git branch.
 
 ### Seed File for Preview Data
@@ -296,6 +297,7 @@ If you see `failed to parse config: 'db' has invalid keys:`, remove the offendin
 | Branching config parse error (`invalid keys`) | `health_timeout` or other newer config keys not supported by branching CLI | Remove the unsupported key from `config.toml` |
 | Seed runs but login fails silently | `crypt()`/`gen_salt()` not in search path, or `DO $$` block swallowing errors | Use `extensions.crypt()`, plain INSERTs, and include `auth.identities` row |
 | Seed data not updating after push | Seed only runs on branch creation/reset | Reset the branch from Supabase dashboard |
+| Sites/data visible on preview but missing in production | "Deploy to production" is OFF in GitHub integration — migrations never applied to production DB | Enable "Deploy to production" in Project Settings > Integrations > GitHub, then push to main to trigger |
 
 ## Deployment Checklist
 
@@ -308,6 +310,7 @@ If you see `failed to parse config: 'db' has invalid keys:`, remove the offendin
 - [ ] Realtime enabled for tables that need subscriptions
 - [ ] Test schema created (if using schema-based test isolation)
 - [ ] Auto-deploy on push to main configured
+- [ ] Supabase Branching: GitHub integration "Deploy to production" enabled
 - [ ] Supabase Branching: GitHub integration "Supabase directory" set to `.`
 - [ ] Supabase Branching: `seed.sql` uses `extensions.crypt()` and plain INSERTs
 - [ ] Supabase Branching: `config.toml` has no unsupported keys (e.g., `health_timeout`)

@@ -106,6 +106,8 @@ This gives you a fourth environment type:
 
 Preview environments are seeded from a seed file (e.g., `supabase/seed.sql`) that creates test users and sample data. The seed runs once on branch creation — not on every push. To re-seed, reset the branch from the platform dashboard.
 
+**Critical:** Preview database provisioning and production migration deployment are separate settings. Just because preview branches get their own databases with migrations applied does **not** mean production receives those migrations on merge. With Supabase Branching, you must explicitly enable **"Deploy to production"** in the GitHub integration settings — otherwise migrations only apply to branch databases and the production schema silently drifts behind, causing queries to fail on missing columns/tables.
+
 **Key principle:** Preview environments follow the same isolation rules as test — they get their own database instance with throwaway data, never sharing state with dev or production.
 
 For Supabase-specific setup details (GitHub integration config, seed file format, gotchas), see the **vercel-supabase-stack** skill.
