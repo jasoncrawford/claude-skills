@@ -62,5 +62,4 @@ Add continuous integration once you have tests.
 ## Related Skills
 
 - `branch-discipline` — all work on branches, never commit to main
-- `issue-driven-development` — create issues before starting work, reference in PRs
-- `no-skipped-tests` — enforce after CI is set up
+- `test-discipline` — enforce after CI is set up
