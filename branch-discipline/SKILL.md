@@ -144,6 +144,8 @@ There is no change small enough to skip the branch workflow. Small changes are f
 - [ ] Currently on a branch, not main
 - [ ] Working in a worktree, not the main checkout
 - [ ] Branch is based on latest main
+- [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
+- [ ] All tests pass with zero skipped
 - [ ] PR created with auto-merge enabled
 - [ ] CI passing before merge (enforced by branch protection)
 - [ ] Worktree removed and branch deleted after merge

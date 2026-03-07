@@ -21,6 +21,10 @@ When fixing a bug tracked in GitHub Issues, close the issue with a comment notin
 - If only partially fixed, add a comment instead: `gh issue comment <number> --body "Partially addressed in <commit-hash>: <what was done>"`
 - If not actually an issue, close with explanation: `gh issue close <number> --reason "not planned" --comment "<explanation>"`
 
+## Before Closing
+
+Confirm a test was written that would have caught this bug. If no test was written, note why in the closing comment (e.g., "purely cosmetic," "already covered by existing test X").
+
 ## Not Acceptable
 
 - Fixing the code but forgetting to close the issue
