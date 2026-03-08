@@ -1,9 +1,18 @@
 ---
 name: branch-discipline
-description: Use when making any code changes, implementing features, fixing bugs, or modifying files that will be committed — all work happens on branches, never on main
+description: Use when editing files in projects that have CI or PRs set up, or otherwise use branches, or whenever multiple agents might work in parallel
 ---
 
 # Branch Discipline
+
+## When This Skill Applies
+
+This skill applies when a project has:
+- GitHub CI configured (Actions workflows, branch protection rules), **or**
+- Pull requests as the standard integration path, **or**
+- Multiple agents working in parallel on independent tasks
+
+**It may not apply** in the earliest experimental or prototype stages of a project, or in small repos that have no automated tests and consist mainly of config rather than code — situations where the overhead of branches and PRs adds friction without providing meaningful safety. When in doubt, ask the user.
 
 ## Overview
 
@@ -135,7 +144,7 @@ There is no change small enough to skip the branch workflow. Small changes are f
 |--------|---------|
 | "It's just a one-line fix" | One-line fixes can break things. Branch takes 30 seconds. |
 | "CI is slow, I'll push to main and fix later" | "Fix later" means "forget and ship broken." |
-| "I'm the only one working on this" | You're not — AI agents may be working in parallel, and future-you is a collaborator too. |
+| "I'm the only one working on this" | Once CI exists, you're not — AI agents may be working in parallel, and future-you is a collaborator too. |
 | "I need this on main right now" | Push the branch, CI runs in minutes. If it's truly urgent, the test suite is your friend, not your obstacle. |
 | "Branch protection is slowing me down" | Auto-merge makes it zero-effort. The "slowness" is CI doing its job. |
 
