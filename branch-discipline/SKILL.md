@@ -48,6 +48,9 @@ git worktree add /tmp/worktree-short-description short-description
 cd /tmp/worktree-short-description
 git push -u origin short-description
 gh pr create --title "Short description" --body "..."
+# If this PR resolves a GitHub issue, include a closing keyword in the body:
+# "Closes #42" / "Fixes #42" / "Resolves #42"
+# A plain link ("see #42") does NOT auto-close the issue on merge.
 
 # After user merges — clean up
 cd /path/to/main/checkout
@@ -159,5 +162,6 @@ There is no change small enough to skip the branch workflow. Small changes are f
 - [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
 - [ ] All tests pass with zero skipped
 - [ ] PR created — auto-merge NOT enabled; left for user to review and merge
+- [ ] PR body includes `Closes #N` / `Fixes #N` / `Resolves #N` if this resolves a GitHub issue (a plain link does not auto-close)
 - [ ] CI passing before merge (enforced by branch protection)
 - [ ] Worktree removed and branch deleted after merge
