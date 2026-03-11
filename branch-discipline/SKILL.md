@@ -28,10 +28,12 @@ main is read-only. Always.
 
 1. **Create a branch and worktree** from main before making any changes
 2. **Do all work** in the worktree — commits, edits, iterations
-3. **Push the branch** and open a PR with auto-merge enabled
+3. **Push the branch** and open a PR — leave merging to the user
 4. **CI runs** automatically on the PR
-5. **CI passes** → PR auto-merges → branch is deleted
+5. **User reviews** → merges when satisfied → branch is deleted
 6. **CI fails** → fix on the same branch, push again, CI re-runs
+
+**Never enable auto-merge.** Always leave the PR open for the user to review and merge.
 
 ```bash
 # Start work — create branch + worktree
@@ -40,13 +42,12 @@ git worktree add /tmp/worktree-short-description short-description
 
 # ... make changes in /tmp/worktree-short-description, commit ...
 
-# Push and create PR with auto-merge
+# Push and create PR — do NOT run gh pr merge --auto --merge
 cd /tmp/worktree-short-description
 git push -u origin short-description
 gh pr create --title "Short description" --body "..."
-gh pr merge --auto --merge
 
-# After merge — clean up
+# After user merges — clean up
 cd /path/to/main/checkout
 git worktree remove /tmp/worktree-short-description
 git branch -d short-description
@@ -146,7 +147,7 @@ There is no change small enough to skip the branch workflow. Small changes are f
 | "CI is slow, I'll push to main and fix later" | "Fix later" means "forget and ship broken." |
 | "I'm the only one working on this" | Once CI exists, you're not — AI agents may be working in parallel, and future-you is a collaborator too. |
 | "I need this on main right now" | Push the branch, CI runs in minutes. If it's truly urgent, the test suite is your friend, not your obstacle. |
-| "Branch protection is slowing me down" | Auto-merge makes it zero-effort. The "slowness" is CI doing its job. |
+| "Branch protection is slowing me down" | The "slowness" is CI doing its job. Push, open a PR, let the user review. |
 
 ## Checklist
 
@@ -155,6 +156,6 @@ There is no change small enough to skip the branch workflow. Small changes are f
 - [ ] Branch is based on latest main
 - [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
 - [ ] All tests pass with zero skipped
-- [ ] PR created with auto-merge enabled
+- [ ] PR created — auto-merge NOT enabled; left for user to review and merge
 - [ ] CI passing before merge (enforced by branch protection)
 - [ ] Worktree removed and branch deleted after merge
