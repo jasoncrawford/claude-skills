@@ -28,12 +28,14 @@ main is read-only. Always.
 
 1. **Create a branch and worktree** from main before making any changes
 2. **Do all work** in the worktree — commits, edits, iterations
-3. **Push the branch** and open a PR — leave merging to the user
+3. **Push the branch and open a PR immediately** — but do not auto-merge
 4. **CI runs** automatically on the PR
 5. **User reviews** → merges when satisfied → branch is deleted
 6. **CI fails** → fix on the same branch, push again, CI re-runs
 
 **Never enable auto-merge.** Always leave the PR open for the user to review and merge.
+
+**Create the PR proactively.** Don't wait to be asked — when the branch is ready, push it and open the PR as part of completing the work.
 
 ```bash
 # Start work — create branch + worktree
