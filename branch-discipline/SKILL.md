@@ -69,17 +69,16 @@ Why:
 
 If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Create a worktree instead.
 
-## Never Cherry-Pick or Force-Push
+## Never Cherry-Pick or Force-Push to Main
 
-**`git cherry-pick` and `git push --force` (including `--force-with-lease`) are anti-patterns. Do not use them.**
+**`git cherry-pick` and `git push --force` (or `--force-with-lease`) to `main` are anti-patterns. Do not use them on main.**
 
 - **Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
-- **Force-push** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
+- **Force-push to main** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
 
-Both are symptoms of the same root problem: working without proper worktree isolation, then trying to fix the resulting mess with dangerous git operations. If you use worktrees correctly, you will never need either one.
+**On feature branches, `--force-with-lease` is correct after a rebase.** Rebasing rewrites commit SHAs, so a plain `git push` will be rejected if the branch was already pushed to the remote. Use `--force-with-lease` (not `--force`) — it fails safely if someone else pushed to the branch since your last fetch.
 
-**What to do instead:**
-- Need to rebase? That's fine — `git rebase main` in a worktree, then `git push` (which works because no one else is force-pushing to your branch)
+**What to do instead of cherry-pick:**
 - Got into a bad state? Ask the user before taking destructive action. Explain what went wrong and propose a safe fix.
 
 ## Branch Naming
@@ -125,10 +124,10 @@ When working on several things at once (common with AI agents):
 cd /tmp/worktree-my-branch
 git fetch origin main
 git rebase origin/main
-git push
+git push --force-with-lease
 ```
 
-Note: `git push` (no `--force`) works here because your branch's worktree is isolated — no one else is pushing to your feature branch, so the rebase doesn't cause a conflict with the remote. If `git push` is rejected, something unexpected happened — investigate rather than force-pushing.
+Use `--force-with-lease` (not plain `--force`) — rebasing rewrites commit SHAs so the remote will reject a plain push. `--force-with-lease` is safe: it fails if someone else pushed to your branch since your last fetch, preventing accidental overwrites.
 
 ## What Belongs on a Branch
 
