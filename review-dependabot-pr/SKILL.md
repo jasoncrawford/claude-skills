@@ -28,7 +28,7 @@ digraph review {
   "CI passing?" -> "Enable auto-merge if not set" [label="yes"];
   "CI passing?" -> "Re-run workflow" [label="transient failure?"];
   "CI passing?" -> "Fix breaking change" [label="breaking change"];
-  "Fix breaking change" -> "Defer/close: complex fix" [label="too complex"];
+  "Fix breaking change" -> "Comment and leave open" [label="too complex"];
   "Package scrutiny level?" -> "Read changelog" [label="medium/high"];
   "Package scrutiny level?" -> "Merge" [label="low — CI passes"];
   "Read changelog" -> "Merge" [label="no breaking changes for our usage"];
@@ -86,7 +86,7 @@ git push
 
 CI will re-run. If it passes, the PR can be merged.
 
-**If the fix is non-trivial** (requires understanding business logic, affects tests, or touches core features), don't guess. Close the PR with a comment explaining what broke and why it needs human review, or request user UAT.
+**If the fix is non-trivial** (requires understanding business logic, affects tests, or touches core features), don't guess. Leave a comment on the PR explaining what broke and why it needs human attention, and leave the PR open. Don't close it — Dependabot will just recreate it noisily, and leaving it open keeps it visible for the human to act on.
 
 Note: Dependabot may overwrite your branch if it rebases. If that happens, your commits disappear — you may need to re-apply the fix or ask the user to handle it.
 
