@@ -24,6 +24,22 @@ Check for:
 - Tests that were skipped due to earlier failures (serial test suites)
 - Flaky tests that "usually pass" — these are bugs
 
+## Match Test Level to Where the Bug Lives
+
+A test at the wrong level of abstraction adds zero value, even if it passes and fails correctly.
+
+**Ask: where does the failure actually occur?**
+
+| Bug type | Right test level | Wrong test level |
+|----------|-----------------|-----------------|
+| Wrong logic inside a function | Unit test on that function | Integration test that incidentally exercises it |
+| Two components not wired together correctly | Integration test using both real components | Unit test on the glue code between them |
+| Wrong URL, path, or config passed across a boundary | Integration test verifying the connection works end-to-end | Unit test asserting the string value |
+
+**Integration bugs need integration tests.** If the bug is "A couldn't talk to B because of a wrong path/protocol/format," a unit test that checks the path string is just testing string concatenation — it doesn't prove A and B can actually connect. Use real instances of both.
+
+**Red flag:** If your test doesn't exercise any production code path that was broken before the fix, it's testing the wrong thing. Ask: "Would this test have caught the bug if I hadn't already fixed it?"
+
 ## Not Acceptable
 
 - Writing no new test for a bug fix ("the bug was obvious, no test needed")
@@ -31,5 +47,6 @@ Check for:
 - "It was already skipped before I started"
 - "It's unrelated to my change"
 - "It's flaky but usually passes"
+- Writing a unit test for an integration bug ("at least there's coverage")
 
 If you didn't break it, you still found it. Fix it or flag it.
