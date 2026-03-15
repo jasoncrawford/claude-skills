@@ -69,17 +69,21 @@ Why:
 
 If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Create a worktree instead.
 
-## Never Cherry-Pick or Force-Push to Main
+## Never Cherry-Pick
 
-**`git cherry-pick` and `git push --force` (or `--force-with-lease`) to `main` are anti-patterns. Do not use them on main.**
+**`git cherry-pick` is an anti-patterns. Do not use it.**
 
-- **Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
-- **Force-push to main** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
+**Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
+
+**What to do instead:** Got into a bad state? Ask the user before taking destructive action. Explain what went wrong and propose a safe fix.
+
+## Never Force-Push to Main
+
+**`git push --force` (or `--force-with-lease`) to `main` is an anti-pattern. Do not use this on main.**
+
+**Force-push to main** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
 
 **On feature branches, `--force-with-lease` is correct after a rebase.** Rebasing rewrites commit SHAs, so a plain `git push` will be rejected if the branch was already pushed to the remote. Use `--force-with-lease` (not `--force`) — it fails safely if someone else pushed to the branch since your last fetch.
-
-**What to do instead of cherry-pick:**
-- Got into a bad state? Ask the user before taking destructive action. Explain what went wrong and propose a safe fix.
 
 ## Branch Naming
 
