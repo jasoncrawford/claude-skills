@@ -1,6 +1,6 @@
 ---
 name: notes-before-clear
-description: Before we clear context, please review our current conversation and save any notes worth keeping across sessions.
+description: Use before running /clear to save session notes to memory and project docs
 disable-model-invocation: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: pr-merged
-description: PR was merged. Before we end this session.
+description: Use after a PR is merged to handle followups, skill updates, and docs
 disable-model-invocation: true
 ---
 

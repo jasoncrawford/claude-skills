@@ -1,6 +1,6 @@
 ---
 name: failed-tests
-description: A test run failed on the PR. $ARGUMENTS
+description: Use when CI tests fail on a PR
 disable-model-invocation: true
 ---
 
