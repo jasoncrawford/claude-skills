@@ -82,6 +82,10 @@ jobs:
         env:
           CI: true
 
+      # TypeScript projects: catch type errors that tsx/ts-node skip at runtime
+      - run: npx tsc --noEmit
+        if: hashFiles('tsconfig.json') != ''
+
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -91,6 +95,8 @@ jobs:
 ```
 
 Start with this and iterate. Add services (databases, etc.) as your project needs them.
+
+> **TypeScript note:** `tsx` and `ts-node` skip type checking for speed. Without `tsc --noEmit` in CI, type errors (wrong namespace, missing imports, renamed exports) only surface at runtime. The `if: hashFiles('tsconfig.json') != ''` condition makes this step a no-op in non-TypeScript projects.
 
 ### 2. Branch Protection
 
@@ -185,6 +191,7 @@ Always clean up with `if: always()`.
 | Running full test suite locally before every push | Push to CI instead. Spot-check locally, gate on CI. |
 | Doing everything on main because "it's just me" | Solo projects benefit from branch discipline too — especially with AI agents. |
 | Not uploading artifacts on failure | Always upload test results — you can't SSH into CI to debug. |
+| Skipping `tsc --noEmit` for TypeScript projects | `tsx`/`ts-node` skip type checking — type errors only show up at runtime without this step. |
 
 ## Checklist
 
@@ -194,6 +201,7 @@ Always clean up with `if: always()`.
 - [ ] Auto-merge enabled
 - [ ] Test artifacts uploaded on failure
 - [ ] All tests included in CI (especially slow ones — that's the point)
+- [ ] `npx tsc --noEmit` added after tests (TypeScript projects)
 - [ ] Local services started and stopped in CI (with `if: always()` cleanup)
 - [ ] Keyboard shortcuts use `(metaKey || ctrlKey)` in app code and platform-aware `CMD` in tests
 - [ ] Test output directory outside project root in CI (avoids file watcher crashes)
