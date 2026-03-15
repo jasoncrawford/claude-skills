@@ -26,19 +26,23 @@ main is read-only. Always.
 
 ## Workflow
 
-1. **Create a branch and worktree** from main before making any changes
-2. **Do all work** in the worktree — commits, edits, iterations
-3. **Push the branch and open a PR immediately** — but do not auto-merge
-4. **CI runs** automatically on the PR
-5. **User reviews** → merges when satisfied → branch is deleted
-6. **CI fails** → fix on the same branch, push again, CI re-runs
+1. **Pull latest main** before making any changes — `git pull --rebase origin main` in the main checkout
+2. **Create a branch and worktree** from main before making any changes
+3. **Do all work** in the worktree — commits, edits, iterations
+4. **Push the branch and open a PR immediately** — but do not auto-merge
+5. **CI runs** automatically on the PR
+6. **User reviews** → merges when satisfied → branch is deleted
+7. **CI fails** → fix on the same branch, push again, CI re-runs
 
 **Never enable auto-merge.** Always leave the PR open for the user to review and merge.
 
 **Create the PR proactively.** Don't wait to be asked — when the branch is ready, push it and open the PR as part of completing the work.
 
 ```bash
-# Start work — create branch + worktree
+# Start work — pull latest main first
+git pull --rebase origin main
+
+# Create branch + worktree from updated main
 git branch short-description main
 git worktree add /tmp/worktree-short-description short-description
 
@@ -161,6 +165,7 @@ There is no change small enough to skip the branch workflow. Small changes are f
 
 - [ ] Currently on a branch, not main
 - [ ] Working in a worktree, not the main checkout
+- [ ] `git pull --rebase origin main` run in main checkout before branching
 - [ ] Branch is based on latest main
 - [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
 - [ ] All tests pass with zero skipped
