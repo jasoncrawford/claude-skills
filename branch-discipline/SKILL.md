@@ -75,7 +75,7 @@ If you find yourself running `git checkout <branch>` or `git switch <branch>` to
 
 ## Never Cherry-Pick
 
-**`git cherry-pick` is an anti-pattern. Do not use it — ever, for any reason.**
+**`git cherry-pick` is an anti-pattern. Do not use it. If you think it is necessary, always get explicit user permission first.**
 
 **Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
 
