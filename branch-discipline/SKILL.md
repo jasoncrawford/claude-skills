@@ -75,11 +75,22 @@ If you find yourself running `git checkout <branch>` or `git switch <branch>` to
 
 ## Never Cherry-Pick
 
-**`git cherry-pick` is an anti-patterns. Do not use it.**
+**`git cherry-pick` is an anti-pattern. Do not use it — ever, for any reason.**
 
 **Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
 
-**What to do instead:** Got into a bad state? Ask the user before taking destructive action. Explain what went wrong and propose a safe fix.
+### Depending on an unmerged PR
+
+The most tempting misuse: needing code that exists in another branch that hasn't been merged yet. **Do not cherry-pick those commits.** Instead:
+
+1. **Stop work** on the current task
+2. **Identify the blocking PR** — note its number and what it provides
+3. **Tell the user** clearly: "I can't proceed until PR #N is merged. It provides [X]. Please merge it and let me know when it's done."
+4. **Wait** — do not work around it, do not duplicate the code, do not cherry-pick
+
+This is the correct behavior even if the wait feels inefficient. Cherry-picking from an unmerged PR creates a hidden dependency, risks double-applying changes when the PR eventually merges, and bypasses the review process for that code.
+
+**What to do in other bad states:** Got into a messy git state through some other means? Ask the user before taking any destructive action. Explain what went wrong and propose a safe fix.
 
 ## Never Force-Push to Main
 
