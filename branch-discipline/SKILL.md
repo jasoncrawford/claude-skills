@@ -38,40 +38,40 @@ main is read-only. Always.
 
 **Create the PR proactively.** Don't wait to be asked — when the branch is ready, push it and open the PR as part of completing the work.
 
-```bash
-# Start work — pull latest main first
+```
+# Start work — pull latest main first (in main checkout)
 git pull --rebase origin main
 
-# Create branch + worktree from updated main
-git branch short-description main
-git worktree add /tmp/worktree-short-description short-description
+# Create branch + worktree using the EnterWorktree tool
+# → provide a short-description name; the tool creates .claude/worktrees/<name>
+#   with a new branch and switches the session into it
 
-# ... make changes in /tmp/worktree-short-description, commit ...
+# ... make changes, commit ...
 
 # Push and create PR — do NOT run gh pr merge --auto --merge
-cd /tmp/worktree-short-description
 git push -u origin short-description
 gh pr create --title "Short description" --body "..."
 # If this PR resolves a GitHub issue, include a closing keyword in the body:
 # "Closes #42" / "Fixes #42" / "Resolves #42"
 # A plain link ("see #42") does NOT auto-close the issue on merge.
 
-# After user merges — clean up
-cd /path/to/main/checkout
-git worktree remove /tmp/worktree-short-description
-git branch -d short-description
+# After user merges — use ExitWorktree, then clean up
+git -C /path/to/main/checkout worktree remove .claude/worktrees/short-description
+git -C /path/to/main/checkout branch -d short-description
 ```
 
 ## Always Use Worktrees
 
 **Every branch MUST have its own worktree.** Never work on a branch by switching branches in the main checkout with `git checkout` or `git switch`. This is the single most important rule after "main is read-only."
 
+**Use the `EnterWorktree` tool** to create worktrees — do not use `git worktree add` manually. `EnterWorktree` handles directory creation, branch setup, and switches the session into the worktree automatically. These instructions override `superpowers:using-git-worktrees` if that skill is also loaded.
+
 Why:
 - **Switching branches in a shared working directory causes cross-contamination** — uncommitted changes bleed between branches, the index gets confused, and you end up debugging git instead of shipping code
 - **Worktrees are fully isolated** — each branch gets its own working directory with its own files and index, so nothing can interfere
 - **The main checkout stays pristine** — always pointing at main, always clean, always available to start new work or read reference code
 
-If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Create a worktree instead.
+If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Use `EnterWorktree` instead.
 
 ## Never Cherry-Pick
 
@@ -128,7 +128,7 @@ Git worktrees let multiple branches be checked out simultaneously in different d
 
 Without worktrees, only one branch can be active at a time. With them, every branch gets its own directory and agents can run truly in parallel.
 
-Worktrees go in `/tmp/worktree-*` by convention — outside the project directory, easy to find, automatically cleaned up on reboot.
+Worktrees are created by the `EnterWorktree` tool in `.claude/worktrees/` inside the project directory.
 
 ## Multiple Workstreams
 
@@ -140,10 +140,9 @@ When working on several things at once (common with AI agents):
 - If main moves forward (another PR merged), rebase before merging:
 
 ```bash
-cd /tmp/worktree-my-branch
-git fetch origin main
-git rebase origin/main
-git push --force-with-lease
+git -C .claude/worktrees/my-branch fetch origin main
+git -C .claude/worktrees/my-branch rebase origin/main
+git -C .claude/worktrees/my-branch push --force-with-lease
 ```
 
 Use `--force-with-lease` (not plain `--force`) — rebasing rewrites commit SHAs so the remote will reject a plain push. `--force-with-lease` is safe: it fails if someone else pushed to your branch since your last fetch, preventing accidental overwrites.
