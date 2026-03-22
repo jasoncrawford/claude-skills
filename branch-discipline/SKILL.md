@@ -55,9 +55,9 @@ gh pr create --title "Short description" --body "..."
 # "Closes #42" / "Fixes #42" / "Resolves #42"
 # A plain link ("see #42") does NOT auto-close the issue on merge.
 
-# After user merges — use ExitWorktree, then clean up
-git -C /path/to/main/checkout worktree remove .claude/worktrees/short-description
-git -C /path/to/main/checkout branch -d short-description
+# After user merges — use ExitWorktree to return to the main checkout, then clean up
+git worktree remove .claude/worktrees/short-description
+git branch -d short-description
 ```
 
 ## Always Use Worktrees
@@ -140,9 +140,10 @@ When working on several things at once (common with AI agents):
 - If main moves forward (another PR merged), rebase before merging:
 
 ```bash
-git -C .claude/worktrees/my-branch fetch origin main
-git -C .claude/worktrees/my-branch rebase origin/main
-git -C .claude/worktrees/my-branch push --force-with-lease
+# From inside the worktree (EnterWorktree switches you there automatically)
+git fetch origin main
+git rebase origin/main
+git push --force-with-lease
 ```
 
 Use `--force-with-lease` (not plain `--force`) — rebasing rewrites commit SHAs so the remote will reject a plain push. `--force-with-lease` is safe: it fails if someone else pushed to your branch since your last fetch, preventing accidental overwrites.
