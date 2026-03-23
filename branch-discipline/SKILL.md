@@ -90,6 +90,8 @@ The most tempting misuse: needing code that exists in another branch that hasn't
 
 This is the correct behavior even if the wait feels inefficient. Cherry-picking from an unmerged PR creates a hidden dependency, risks double-applying changes when the PR eventually merges, and bypasses the review process for that code.
 
+**What to do if `git rebase` fails unexpectedly:** If `git rebase origin/main` fails with "local changes would be overwritten" despite a clean working tree, **stop and ask the user**. Do not use `git cherry-pick` as a substitute. Explain what you tried, what failed, and let the user decide the path forward. A known workaround (to propose, not to execute unilaterally) is: detach HEAD to the onto commit (`git checkout <onto-sha>`), cherry-pick each branch commit in order, then `git branch -f <branch-name> HEAD` — but this requires explicit user approval first.
+
 **What to do in other bad states:** Got into a messy git state through some other means? Ask the user before taking any destructive action. Explain what went wrong and propose a safe fix.
 
 ## Never Force-Push to Main
