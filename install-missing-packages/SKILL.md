@@ -19,13 +19,13 @@ When you see module-not-found errors, **run the package manager install command 
 
 ## The Rule
 
-**Before diagnosing or accepting any module-not-found failure, run:**
+**Before diagnosing or accepting any module-not-found failure, run the install command for this project's package manager:**
 
 ```bash
-npm install        # Node.js / npm
-yarn install       # Yarn
-pnpm install       # pnpm
-pip install -r requirements.txt  # Python
+npm install                      # if package.json / package-lock.json present
+yarn install                     # if yarn.lock present
+pnpm install                     # if pnpm-lock.yaml present
+pip install -r requirements.txt  # if requirements.txt present
 ```
 
 Then re-run the failing command and confirm whether the error is resolved.
@@ -42,6 +42,6 @@ Then re-run the failing command and confirm whether the error is resolved.
 ## Checklist
 
 - [ ] Saw a module-not-found error
-- [ ] Ran the install command for this project's package manager
+- [ ] Identified the project's package manager and ran its install command
 - [ ] Re-ran the failing tests/build
 - [ ] Confirmed whether failures remain after install
