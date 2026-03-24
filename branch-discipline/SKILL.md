@@ -42,9 +42,8 @@ main is read-only. Always.
 # Start work — pull latest main first (in main checkout)
 git pull --rebase origin main
 
-# Create branch + worktree using the EnterWorktree tool
-# → provide a short-description name; the tool creates .claude/worktrees/<name>
-#   with a new branch and switches the session into it
+# Create branch + worktree
+git worktree add .claude/worktrees/short-description -b short-description
 
 # ... make changes, commit ...
 
@@ -55,7 +54,7 @@ gh pr create --title "Short description" --body "..."
 # "Closes #42" / "Fixes #42" / "Resolves #42"
 # A plain link ("see #42") does NOT auto-close the issue on merge.
 
-# After user merges — use ExitWorktree to return to the main checkout, then clean up
+# After user merges — remove the worktree and branch
 git worktree remove .claude/worktrees/short-description
 git branch -d short-description
 ```
@@ -64,14 +63,18 @@ git branch -d short-description
 
 **Every branch MUST have its own worktree.** Never work on a branch by switching branches in the main checkout with `git checkout` or `git switch`. This is the single most important rule after "main is read-only."
 
-**Use the `EnterWorktree` tool** to create worktrees — do not use `git worktree add` manually. `EnterWorktree` handles directory creation, branch setup, and switches the session into the worktree automatically. These instructions override `superpowers:using-git-worktrees` if that skill is also loaded.
+**Use `git worktree add` to create worktrees.** Create them in `.claude/worktrees/` inside the project directory:
+
+```bash
+git worktree add .claude/worktrees/short-description -b short-description
+```
 
 Why:
 - **Switching branches in a shared working directory causes cross-contamination** — uncommitted changes bleed between branches, the index gets confused, and you end up debugging git instead of shipping code
 - **Worktrees are fully isolated** — each branch gets its own working directory with its own files and index, so nothing can interfere
 - **The main checkout stays pristine** — always pointing at main, always clean, always available to start new work or read reference code
 
-If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Use `EnterWorktree` instead.
+If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Use `git worktree add` instead.
 
 ## Never Cherry-Pick
 
@@ -130,7 +133,7 @@ Git worktrees let multiple branches be checked out simultaneously in different d
 
 Without worktrees, only one branch can be active at a time. With them, every branch gets its own directory and agents can run truly in parallel.
 
-Worktrees are created by the `EnterWorktree` tool in `.claude/worktrees/` inside the project directory.
+Worktrees are created with `git worktree add` in `.claude/worktrees/` inside the project directory.
 
 ## Multiple Workstreams
 
@@ -142,7 +145,7 @@ When working on several things at once (common with AI agents):
 - If main moves forward (another PR merged), rebase before merging:
 
 ```bash
-# From inside the worktree (EnterWorktree switches you there automatically)
+# From inside the worktree
 git fetch origin main
 git rebase origin/main
 git push --force-with-lease
