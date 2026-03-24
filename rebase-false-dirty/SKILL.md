@@ -7,7 +7,7 @@ description: Use when git rebase (or pull --rebase) fails with "your local chang
 
 ## Overview
 
-Git sometimes reports phantom local changes during a rebase when `git status` shows nothing. This is caused by **stale ctime entries in git's index**: the file content is unchanged, but filesystem metadata (ctime) has drifted due to OS activity (spotlight, backups, network mounts, etc.). Git trusts ctime by default and mistakes the drift for a modification.
+Git sometimes reports phantom local changes during a rebase when `git status` shows nothing. The cause is not always known. One specific hypothesis: **stale ctime entries in git's index** — file content is unchanged, but filesystem metadata (ctime) has drifted due to OS activity (spotlight, backups, network mounts, etc.), and git mistakes the drift for a modification.
 
 ## The Rule
 
@@ -31,7 +31,7 @@ git update-index --refresh 2>&1     # reveals files with stale index entries
 
 ## Step 2 — Try the approved fix
 
-Run the rebase with `core.trustctime=false`, which tells git to ignore ctime when detecting changes:
+If the ctime hypothesis is correct, running the rebase with `core.trustctime=false` (which tells git to ignore ctime when detecting changes) should fix it:
 
 ```bash
 git -c core.trustctime=false rebase origin/main
@@ -66,6 +66,6 @@ Cherry-pick is not a substitute for rebase. It creates duplicate commits with di
 
 ## Reference
 
-Root cause: macOS (and some Linux setups) update ctime on files during spotlight indexing, Time Machine backups, or network mount operations. Git's index caches ctime and uses it as a cheap "is this file dirty?" check. When ctime has changed but content hasn't, `git status` may still report clean (it falls back to content comparison) while rebase's pre-flight check does not.
+The ctime hypothesis: macOS (and some Linux setups) update ctime on files during spotlight indexing, Time Machine backups, or network mount operations. Git's index caches ctime and uses it as a cheap "is this file dirty?" check. When ctime has changed but content hasn't, `git status` may still report clean (it falls back to content comparison) while rebase's pre-flight check does not. This is one known explanation for the symptom, not a confirmed root cause.
 
-Fix source: https://stackoverflow.com/questions/5074136/git-rebase-fails-your-local-changes-to-the-following-files-would-be-overwritte
+Discussion: https://stackoverflow.com/questions/5074136/git-rebase-fails-your-local-changes-to-the-following-files-would-be-overwritte
