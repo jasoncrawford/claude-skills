@@ -95,34 +95,13 @@ git -C .claude/worktrees/my-feature rebase origin/main
 cd .claude/worktrees/my-feature && git status && git rebase origin/main
 ```
 
-## Never Cherry-Pick
+## Anti-Patterns
 
-**`git cherry-pick` is an anti-pattern. Do not use it. If you think it is necessary, always get explicit user permission first.**
+**Never cherry-pick** — see `no-cherry-pick` skill. If you think you need it, you have a workflow problem. Ask the user.
 
-**Cherry-pick** creates duplicate commits with different SHAs, fractures history, and causes confusion about what's actually been merged. If you need a commit on a different branch, you've got a workflow problem — fix the workflow.
+**Never force-push to main** — see `no-force-push-main` skill. On feature branches, `--force-with-lease` after a rebase is correct. On main, never.
 
-### Depending on an unmerged PR
-
-The most tempting misuse: needing code that exists in another branch that hasn't been merged yet. **Do not cherry-pick those commits.** Instead:
-
-1. **Stop work** on the current task
-2. **Identify the blocking PR** — note its number and what it provides
-3. **Tell the user** clearly: "I can't proceed until PR #N is merged. It provides [X]. Please merge it and let me know when it's done."
-4. **Wait** — do not work around it, do not duplicate the code, do not cherry-pick
-
-This is the correct behavior even if the wait feels inefficient. Cherry-picking from an unmerged PR creates a hidden dependency, risks double-applying changes when the PR eventually merges, and bypasses the review process for that code.
-
-**What to do if `git rebase` fails unexpectedly:** If `git rebase origin/main` fails with "local changes would be overwritten" despite a clean working tree, **stop and ask the user**. Do not use `git cherry-pick` as a substitute. Explain what you tried, what failed, and let the user decide the path forward.
-
-**What to do in other bad states:** Got into a messy git state through some other means? Ask the user before taking any destructive action. Explain what went wrong and propose a safe fix.
-
-## Never Force-Push to Main
-
-**`git push --force` (or `--force-with-lease`) to `main` is an anti-pattern. Do not use this on main.**
-
-**Force-push to main** rewrites shared history. It destroys other people's (and other agents') references to commits, causes divergence that requires manual recovery, and is the #1 cause of lost work in collaborative repos.
-
-**On feature branches, `--force-with-lease` is correct after a rebase.** Rebasing rewrites commit SHAs, so a plain `git push` will be rejected if the branch was already pushed to the remote. Use `--force-with-lease` (not `--force`) — it fails safely if someone else pushed to the branch since your last fetch.
+**Bad git state?** Ask the user before taking any destructive action. Explain what went wrong and propose a safe fix.
 
 ## Branch Naming
 
