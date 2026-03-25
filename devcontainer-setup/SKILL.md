@@ -84,21 +84,6 @@ export GH_TOKEN=$(security find-generic-password -a "$USER" -s "github-pat" -w 2
 
 PAT needs: `repo`, `read:org` scopes (fine-grained, scoped to specific repos).
 
-### Git Push via HTTPS
-
-Even with `GH_TOKEN` set and `gh auth status` showing logged in, `git push` to `https://github.com/...` may fail with "could not read Username for 'https://github.com'". The container has no TTY for interactive credential prompts, and `GIT_ASKPASS=gh` also fails.
-
-**Workaround:** Embed the token temporarily in the remote URL:
-
-```bash
-TOKEN=$(gh auth token)
-git remote set-url origin "https://${TOKEN}@github.com/owner/repo.git"
-git push -u origin <branch>
-git remote set-url origin "https://github.com/owner/repo.git"  # restore clean URL
-```
-
-Also applies to `git pull` and `git fetch` when remote access is needed.
-
 ## Firewall Customization
 
 Edit `init-firewall.sh` and add project-specific domains in the `for domain in` loop. Core domains (GitHub, npm, Claude API, Sentry, Statsig, VS Code) are already included.
