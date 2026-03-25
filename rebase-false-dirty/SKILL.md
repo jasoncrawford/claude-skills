@@ -1,71 +1,112 @@
 ---
 name: rebase-false-dirty
-description: Use when git rebase (or pull --rebase) fails with "your local changes to the following files would be overwritten" but git status shows a clean working tree with no local changes
+description: Use when git rebase fails with "your local changes to the following files would be overwritten" but git status shows a clean working tree with no local changes. Common in linked worktrees.
 ---
 
 # Rebase False-Dirty Failure
 
 ## Overview
 
-Git sometimes reports phantom local changes during a rebase when `git status` shows nothing. The cause is not always known. One specific hypothesis: **stale ctime entries in git's index** — file content is unchanged, but filesystem metadata (ctime) has drifted due to OS activity (spotlight, backups, network mounts, etc.), and git mistakes the drift for a modification.
+Git sometimes reports phantom local changes during a rebase when `git status` shows a clean working tree. In linked worktrees (e.g. `/workspace/.claude/worktrees/*`), the primary cause is:
 
-## The Rule
+**The main workspace's local `main` branch is behind `origin/main`.** When a PR merges on GitHub, `origin/main` advances but the local `main` ref (checked out in `/workspace`) stays stale. Git's rebase pre-flight check in linked worktrees gets confused by this inconsistency and misidentifies committed feature-branch changes as uncommitted local modifications.
 
-**STOP. Do not take any modifying action until you have diagnosed the problem.**
+A secondary trigger makes this worse: **when the feature branch and the new main commits both touch the same files**, the default merge rebase backend fails even after syncing local main. The `--apply` backend handles this case but requires careful verification afterward.
 
-Never cherry-pick, reset, or force-push to work around this. Gather information first, try the one approved fix, and if it fails, report and wait.
+## Step 1 — Diagnose
 
-## Step 1 — Diagnose (read-only)
-
-Confirm the symptom before doing anything:
-
+Confirm the symptom:
 ```bash
 git status                          # should show clean
 git diff                            # should show nothing
 git diff --cached                   # should show nothing
-git diff HEAD                       # should show nothing
-git update-index --refresh 2>&1     # reveals files with stale index entries
 ```
 
-`git update-index --refresh` is diagnostic here — it reports which files git considers "needs update" based on ctime without actually changing anything committed.
-
-## Step 2 — Try the approved fix
-
-If the ctime hypothesis is correct, running the rebase with `core.trustctime=false` (which tells git to ignore ctime when detecting changes) should fix it:
-
+Check whether the main workspace is behind origin/main:
 ```bash
-git -c core.trustctime=false rebase origin/main
+git -C /workspace log --oneline HEAD..origin/main
 ```
 
-If this succeeds, push as normal:
+If this shows commits, the main workspace is stale — proceed to Step 2.
 
+## Step 2 — Sync local main
+
+Fast-forward the main workspace. Use `merge --ff-only` (not `pull --rebase`) because the main workspace may have dirty build artifacts that block pull:
 ```bash
-git push --force-with-lease
+git -C /workspace merge --ff-only origin/main
 ```
 
-## Step 3 — If the fix doesn't work: investigate and pause
-
-If the rebase still fails, **do not attempt any further fixes**. Instead:
-
-1. Collect diagnostic information:
+## Step 3 — Retry rebase (merge backend)
 ```bash
-git status
-git diff
-git diff --cached
-git update-index --refresh 2>&1
-git log --oneline -5
-git log --oneline origin/main -5
+git -C $WORKTREE rebase origin/main
 ```
 
-2. Report the full output to the user.
-3. **Stop and wait for instructions.** Do not cherry-pick, reset, or try alternative approaches without explicit permission.
+If this succeeds, push and you're done:
+```bash
+git -C $WORKTREE push --force-with-lease
+```
+
+## Step 4 — If Step 3 fails, use the apply backend
+
+This happens when the feature branch and new main commits modify the same files. The merge backend's pre-flight check chokes on the overlap; the apply backend uses a patch-based approach that handles it.
+```bash
+git -C $WORKTREE rebase --abort
+git -C $WORKTREE rebase --apply origin/main
+```
+
+If `--apply` succeeds cleanly, push and you're done.
+
+## Step 5 — Handling partial failures in --apply
+
+The `--apply` backend may fail on individual commits with "no changes" or "local changes would be overwritten." When this happens, git's 3-way merge fallback may silently drop some or all of that commit's changes while reporting "all conflicts fixed."
+
+**Do NOT blindly run `git rebase --skip`.** Instead:
+
+1. Check which files the failing commit was supposed to touch:
+```bash
+git show --name-only <commit-hash>
+```
+
+2. For each file, verify whether the commit's changes are actually present:
+```bash
+# What the commit intended to change:
+git diff <commit-hash>^ <commit-hash> -- <file>
+# What's actually in the working tree vs the prior commit:
+git diff HEAD -- <file>
+```
+
+3. If changes are missing, manually reapply them to the working tree.
+
+4. Stage everything and continue:
+```bash
+git -C $WORKTREE add -A
+git -C $WORKTREE rebase --continue
+```
+
+5. If `--continue` says "No changes — did you forget to use git add?", the commit is genuinely a no-op after your manual fixes were folded into a prior commit. In that case `git rebase --skip` is safe.
+
+6. After the rebase completes, verify the final state matches what you expect before pushing. Run tests.
+
+## Step 6 — If nothing works, stop and ask
+
+If the rebase still fails after all steps above, collect diagnostics and report to the user:
+```bash
+git -C $WORKTREE status
+git -C $WORKTREE diff
+git -C $WORKTREE log --oneline origin/main..HEAD
+git -C /workspace log --oneline HEAD..origin/main
+git -C /workspace status --short
+```
+
+Do not cherry-pick, hard reset, or force-push without explicit user permission.
 
 ## Why not cherry-pick
 
-Cherry-pick is not a substitute for rebase. It creates duplicate commits with different SHAs, fractures history, and causes confusion when the branch is eventually rebased properly. See the branch-discipline skill.
+Cherry-pick creates duplicate commits with different SHAs, fractures history, and causes confusion when the branch is eventually merged. It is not a substitute for rebase.
 
-## Reference
+## Quick reference
+```
+fetch → sync main → merge-backend rebase → apply-backend rebase → verify → push
+```
 
-The ctime hypothesis: macOS (and some Linux setups) update ctime on files during spotlight indexing, Time Machine backups, or network mount operations. Git's index caches ctime and uses it as a cheap "is this file dirty?" check. When ctime has changed but content hasn't, `git status` may still report clean (it falls back to content comparison) while rebase's pre-flight check does not. This is one known explanation for the symptom, not a confirmed root cause.
-
-Discussion: https://stackoverflow.com/questions/5074136/git-rebase-fails-your-local-changes-to-the-following-files-would-be-overwritte
+Most of the time, Step 2 (syncing local main) is all that's needed. The apply-backend fallback is only necessary when your branch and main both modified the same files.
