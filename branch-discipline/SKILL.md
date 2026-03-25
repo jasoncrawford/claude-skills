@@ -123,56 +123,21 @@ The branch stays open until CI is green. This is the point — the gate works be
 
 ## When PR Review Requests Changes
 
-Fix on the same branch. Do not:
-- Open a new PR on top of the existing one
-- Create a new branch for the review-requested changes
-- Commit directly to main
-
-Push to the existing PR's branch and the PR updates automatically. A PR comment requesting changes is a request to update *that PR* — not to open a new one.
-
-## Why Worktrees
-
-Git worktrees let multiple branches be checked out simultaneously in different directories. This is critical for parallel work:
-
-- **Multiple agents** can work on different branches at the same time without interfering with each other — each has its own worktree
-- **The main checkout stays clean** — you can read main, start new branches, or review work while agents are mid-change in their worktrees
-- **No stashing or context switching** — each worktree is a fully independent working directory
-
-Without worktrees, only one branch can be active at a time. With them, every branch gets its own directory and agents can run truly in parallel.
-
-Worktrees are created with `git worktree add` in `.claude/worktrees/` inside the project directory.
+Push fixes to the same branch — the PR updates automatically. See `receiving-code-review` skill. Do not open a new PR.
 
 ## Multiple Workstreams
 
-When working on several things at once (common with AI agents):
-
-- Each piece of work gets its own branch and worktree
-- Branches are independent — don't stack branches on branches
-- Each branch is based on current main
-- If main moves forward (another PR merged), rebase before merging:
+Each piece of work gets its own branch and worktree, based on current main. Don't stack branches. If main moves forward, rebase before merging:
 
 ```bash
-# From inside the worktree
-git fetch origin main
-git rebase origin/main
-git push --force-with-lease
+git -C .claude/worktrees/my-feature fetch origin main
+git -C .claude/worktrees/my-feature rebase origin/main
+git -C .claude/worktrees/my-feature push --force-with-lease
 ```
-
-Use `--force-with-lease` (not plain `--force`) — rebasing rewrites commit SHAs so the remote will reject a plain push. `--force-with-lease` is safe: it fails if someone else pushed to your branch since your last fetch, preventing accidental overwrites.
 
 ## What Belongs on a Branch
 
-Everything:
-- Features
-- Bug fixes
-- Refactors
-- Config changes
-- Test additions
-- Documentation updates
-- Dependency upgrades
-- "One-line fixes"
-
-There is no change small enough to skip the branch workflow. Small changes are fast to branch, fast to PR, and fast to pass CI.
+Everything — features, fixes, refactors, config, docs, dependency upgrades, "one-line fixes." No change is too small to skip the branch workflow.
 
 ## One Concern Per Branch
 
