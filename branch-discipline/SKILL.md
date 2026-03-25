@@ -54,7 +54,8 @@ gh pr create --title "Short description" --body "..."
 # "Closes #42" / "Fixes #42" / "Resolves #42"
 # A plain link ("see #42") does NOT auto-close the issue on merge.
 
-# After user merges — remove the worktree and branch
+# After user merges — pull main first, then remove the worktree and branch
+git pull --rebase origin main
 git worktree remove .claude/worktrees/short-description
 git branch -d short-description
 ```
@@ -176,6 +177,7 @@ There is no change small enough to skip the branch workflow. Small changes are f
 | "I'm the only one working on this" | Once CI exists, you're not — AI agents may be working in parallel, and future-you is a collaborator too. |
 | "I need this on main right now" | Push the branch, CI runs in minutes. If it's truly urgent, the test suite is your friend, not your obstacle. |
 | "Branch protection is slowing me down" | The "slowness" is CI doing its job. Push, open a PR, let the user review. |
+| Deleting a branch without pulling main first | `git branch -d` can't verify the branch is merged until local main is up to date. Always `git pull --rebase origin main` before cleanup — otherwise you'll need `git branch -D` (force delete). |
 
 ## Checklist
 
