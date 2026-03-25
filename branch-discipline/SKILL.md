@@ -77,6 +77,24 @@ Why:
 
 If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Use `git worktree add` instead.
 
+**Do not use `EnterWorktree` or `ExitWorktree` tools** — they are broken and non-functional. Use `git worktree add` and `git worktree remove` directly.
+
+**`cd` does not persist between Bash tool calls.** When running git commands in a worktree across multiple separate Bash calls, `cd /path/to/worktree` in call N is gone by call N+1. Always use `git -C <worktree-path>` to explicitly target the correct directory:
+
+```bash
+# WRONG — cd evaporates after the Bash call ends
+cd .claude/worktrees/my-feature && git rebase origin/main
+# next Bash call — now git runs in /workspace, not the worktree!
+git status
+
+# RIGHT — every call is explicit about its directory
+git -C .claude/worktrees/my-feature status
+git -C .claude/worktrees/my-feature rebase origin/main
+
+# RIGHT — chain multi-step ops in a single Bash call when order matters
+cd .claude/worktrees/my-feature && git status && git rebase origin/main
+```
+
 ## Never Cherry-Pick
 
 **`git cherry-pick` is an anti-pattern. Do not use it. If you think it is necessary, always get explicit user permission first.**
@@ -124,6 +142,15 @@ Fix on the same branch. Do not:
 
 The branch stays open until CI is green. This is the point — the gate works because it's non-negotiable.
 
+## When PR Review Requests Changes
+
+Fix on the same branch. Do not:
+- Open a new PR on top of the existing one
+- Create a new branch for the review-requested changes
+- Commit directly to main
+
+Push to the existing PR's branch and the PR updates automatically. A PR comment requesting changes is a request to update *that PR* — not to open a new one.
+
 ## Why Worktrees
 
 Git worktrees let multiple branches be checked out simultaneously in different directories. This is critical for parallel work:
@@ -167,6 +194,17 @@ Everything:
 - "One-line fixes"
 
 There is no change small enough to skip the branch workflow. Small changes are fast to branch, fast to PR, and fast to pass CI.
+
+## One Concern Per Branch
+
+**Each branch must contain only work related to a single concern.** Never commit work for concern X onto a branch that belongs to concern Y.
+
+This applies especially to spec and plan documents: a spec or plan for feature X must go on its own dedicated branch (e.g., `docs/feature-x`), not on an existing feature branch for unrelated work. Mixing concerns:
+- Makes PR review confusing ("why is this plan doc here?")
+- Can require destructive cleanup (force-push) to separate them
+- Creates misleading history
+
+Before committing any spec, plan, or document: check your current branch. If it belongs to different work, create a new dedicated branch first.
 
 ## Common Rationalizations
 

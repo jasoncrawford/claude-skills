@@ -35,6 +35,7 @@ A test at the wrong level of abstraction adds zero value, even if it passes and 
 | Wrong logic inside a function | Unit test on that function | Integration test that incidentally exercises it |
 | Two components not wired together correctly | Integration test using both real components | Unit test on the glue code between them |
 | Wrong URL, path, or config passed across a boundary | Integration test verifying the connection works end-to-end | Unit test asserting the string value |
+| Display or terminal behavior (text output, ordering) | Capture stdout and assert on what the user actually sees | Check that an internal callback fired or a module variable was set |
 
 **Integration bugs need integration tests.** If the bug is "A couldn't talk to B because of a wrong path/protocol/format," a unit test that checks the path string is just testing string concatenation — it doesn't prove A and B can actually connect. Use real instances of both.
 
