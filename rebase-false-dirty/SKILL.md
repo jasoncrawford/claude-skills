@@ -87,9 +87,49 @@ git -C $WORKTREE rebase --continue
 
 6. After the rebase completes, verify the final state matches what you expect before pushing. Run tests.
 
-## Step 6 — If nothing works, stop and ask
+## Step 5a — Check for stale rebase-merge directory
 
-If the rebase still fails after all steps above, collect diagnostics and report to the user:
+If the apply backend fails mid-rebase and subsequent `--abort` doesn't cleanly reset, there may be a leftover `rebase-merge` directory inside the worktree's git state directory. Check for it:
+
+```bash
+find /workspace/.git/worktrees/$WORKTREE_NAME -name "rebase-merge" -o -name "rebase-apply"
+```
+
+If found, delete it manually:
+```bash
+rm -rf /workspace/.git/worktrees/$WORKTREE_NAME/rebase-merge
+rm -rf /workspace/.git/worktrees/$WORKTREE_NAME/rebase-apply
+```
+
+After deleting, verify HEAD is still on the feature branch (not detached):
+```bash
+git -C $WORKTREE status
+git -C $WORKTREE branch
+```
+
+If HEAD is detached, re-attach it: `git -C $WORKTREE checkout <branch-name>`
+
+## Step 6 — If rebase keeps failing, use git merge as a fallback
+
+When all rebase approaches fail, `git merge origin/main` is a valid escape hatch:
+
+```bash
+git -C $WORKTREE merge origin/main
+git -C $WORKTREE push
+```
+
+This brings the branch up-to-date with main via a merge commit. GitHub's `strict: true` branch protection accepts this — it only requires the branch to be a descendant of the base, not that the history be linear.
+
+**Important:** After pushing a merge-from-base commit to a PR branch, GitHub Actions may NOT automatically trigger a new CI run (no `synchronize` event fires). If CI is required to pass before merge and the `statusCheckRollup` shows empty, push an empty commit to force it:
+
+```bash
+git -C $WORKTREE commit --allow-empty -m "chore: trigger CI"
+git -C $WORKTREE push
+```
+
+## Step 7 — If nothing works, stop and ask
+
+If the branch still can't be brought up-to-date, collect diagnostics and report to the user:
 ```bash
 git -C $WORKTREE status
 git -C $WORKTREE diff
@@ -106,7 +146,7 @@ Cherry-pick creates duplicate commits with different SHAs, fractures history, an
 
 ## Quick reference
 ```
-fetch → sync main → merge-backend rebase → apply-backend rebase → verify → push
+fetch → sync main → merge-backend rebase → apply-backend rebase → check stale rebase-merge dir → git merge fallback → push (+ empty commit if CI doesn't trigger)
 ```
 
-Most of the time, Step 2 (syncing local main) is all that's needed. The apply-backend fallback is only necessary when your branch and main both modified the same files.
+Most of the time, Step 2 (syncing local main) is all that's needed. The apply-backend fallback is only necessary when your branch and main both modified the same files. If all rebase approaches fail, `git merge` is the escape hatch.
