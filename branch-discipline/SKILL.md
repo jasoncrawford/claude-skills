@@ -26,9 +26,9 @@ main is read-only. Always.
 
 ## Workflow
 
-1. **Pull latest main** before making any changes — `git pull --rebase origin main` in the main checkout
-2. **Create a branch and worktree** from main before making any changes
-3. **Do all work** in the worktree — commits, edits, iterations
+1. **Pull latest main** before making any changes — `git pull --rebase origin main`
+2. **Create a branch** from main before making any changes
+3. **Do all work** on the branch — commits, edits, iterations
 4. **Push the branch and open a PR immediately** — but do not auto-merge
 5. **CI runs** automatically on the PR
 6. **User reviews** → merges when satisfied → branch is deleted
@@ -38,12 +38,12 @@ main is read-only. Always.
 
 **Create the PR proactively.** Don't wait to be asked — when the branch is ready, push it and open the PR as part of completing the work.
 
-```
-# Start work — pull latest main first (in main checkout)
+```bash
+# Pull latest main first
 git pull --rebase origin main
 
-# Create branch + worktree
-git worktree add .claude/worktrees/short-description -b short-description
+# Create branch
+git checkout -b short-description
 
 # ... make changes, commit ...
 
@@ -54,45 +54,9 @@ gh pr create --title "Short description" --body "..."
 # "Closes #42" / "Fixes #42" / "Resolves #42"
 # A plain link ("see #42") does NOT auto-close the issue on merge.
 
-# After user merges — pull main first, then remove the worktree and branch
+# After user merges — pull main and delete the branch
 git pull --rebase origin main
-git worktree remove .claude/worktrees/short-description
 git branch -d short-description
-```
-
-## Always Use Worktrees
-
-**Every branch MUST have its own worktree.** Never work on a branch by switching branches in the main checkout with `git checkout` or `git switch`. This is the single most important rule after "main is read-only."
-
-**Use `git worktree add` to create worktrees.** Create them in `.claude/worktrees/` inside the project directory:
-
-```bash
-git worktree add .claude/worktrees/short-description -b short-description
-```
-
-Why:
-- **Switching branches in a shared working directory causes cross-contamination** — uncommitted changes bleed between branches, the index gets confused, and you end up debugging git instead of shipping code
-- **Worktrees are fully isolated** — each branch gets its own working directory with its own files and index, so nothing can interfere
-- **The main checkout stays pristine** — always pointing at main, always clean, always available to start new work or read reference code
-
-If you find yourself running `git checkout <branch>` or `git switch <branch>` to do work, stop — you're doing it wrong. Use `git worktree add` instead.
-
-**Do not use `EnterWorktree` or `ExitWorktree` tools** — they are broken and non-functional. Use `git worktree add` and `git worktree remove` directly.
-
-**`cd` does not persist between Bash tool calls.** When running git commands in a worktree across multiple separate Bash calls, `cd /path/to/worktree` in call N is gone by call N+1. Always use `git -C <worktree-path>` to explicitly target the correct directory:
-
-```bash
-# WRONG — cd evaporates after the Bash call ends
-cd .claude/worktrees/my-feature && git rebase origin/main
-# next Bash call — now git runs in /workspace, not the worktree!
-git status
-
-# RIGHT — every call is explicit about its directory
-git -C .claude/worktrees/my-feature status
-git -C .claude/worktrees/my-feature rebase origin/main
-
-# RIGHT — chain multi-step ops in a single Bash call when order matters
-cd .claude/worktrees/my-feature && git status && git rebase origin/main
 ```
 
 ## Anti-Patterns
@@ -127,12 +91,12 @@ Push fixes to the same branch — the PR updates automatically. See `receiving-c
 
 ## Multiple Workstreams
 
-Each piece of work gets its own branch and worktree, based on current main. Don't stack branches. If main moves forward, rebase before merging:
+Each piece of work gets its own branch, based on current main. Don't stack branches. If main moves forward, rebase before merging:
 
 ```bash
-git -C .claude/worktrees/my-feature fetch origin main
-git -C .claude/worktrees/my-feature rebase origin/main
-git -C .claude/worktrees/my-feature push --force-with-lease
+git fetch origin main
+git rebase origin/main
+git push --force-with-lease
 ```
 
 ## What Belongs on a Branch
@@ -164,12 +128,11 @@ Before committing any spec, plan, or document: check your current branch. If it 
 ## Checklist
 
 - [ ] Currently on a branch, not main
-- [ ] Working in a worktree, not the main checkout
-- [ ] `git pull --rebase origin main` run in main checkout before branching
+- [ ] `git pull --rebase origin main` run before branching
 - [ ] Branch is based on latest main
 - [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
 - [ ] All tests pass with zero skipped
 - [ ] PR created — auto-merge NOT enabled; left for user to review and merge
 - [ ] PR body includes `Closes #N` / `Fixes #N` / `Resolves #N` if this resolves a GitHub issue (a plain link does not auto-close)
 - [ ] CI passing before merge (enforced by branch protection)
-- [ ] Worktree removed and branch deleted after merge
+- [ ] Branch deleted after merge
