@@ -24,12 +24,19 @@ All changes go through branches and pull requests. Nothing is ever committed dir
 main is read-only. Always.
 ```
 
+## Worktrees
+
+Whether you need a worktree depends on your environment:
+
+- **Isolated checkout** (e.g., a brunel worker with its own cloned workspace): just create a branch — you're already isolated.
+- **Shared checkout** (a repo directory used by multiple agents or by a human alongside you): use a worktree to avoid cross-contamination. See the `superpowers:using-git-worktrees` skill.
+
 ## Workflow
 
-1. **Pull latest main** before making any changes — `git pull --rebase origin main`
-2. **Create a branch** from main before making any changes
+1. **Pull latest main** before making any changes
+2. **Create a branch** (and a worktree if needed — see above)
 3. **Do all work** on the branch — commits, edits, iterations
-4. **Push the branch and open a PR immediately** — but do not auto-merge
+4. **Push the branch and open a PR** — but do not auto-merge
 5. **CI runs** automatically on the PR
 6. **User reviews** → merges when satisfied → branch is deleted
 7. **CI fails** → fix on the same branch, push again, CI re-runs
@@ -38,26 +45,7 @@ main is read-only. Always.
 
 **Create the PR proactively.** Don't wait to be asked — when the branch is ready, push it and open the PR as part of completing the work.
 
-```bash
-# Pull latest main first
-git pull --rebase origin main
-
-# Create branch
-git checkout -b short-description
-
-# ... make changes, commit ...
-
-# Push and create PR — do NOT run gh pr merge --auto --merge
-git push -u origin short-description
-gh pr create --title "Short description" --body "..."
-# If this PR resolves a GitHub issue, include a closing keyword in the body:
-# "Closes #42" / "Fixes #42" / "Resolves #42"
-# A plain link ("see #42") does NOT auto-close the issue on merge.
-
-# After user merges — pull main and delete the branch
-git pull --rebase origin main
-git branch -d short-description
-```
+If this PR resolves a GitHub issue, include a closing keyword in the PR body: `Closes #42` / `Fixes #42` / `Resolves #42`. A plain link (`see #42`) does NOT auto-close the issue on merge.
 
 ## Anti-Patterns
 
@@ -91,13 +79,7 @@ Push fixes to the same branch — the PR updates automatically. See `receiving-c
 
 ## Multiple Workstreams
 
-Each piece of work gets its own branch, based on current main. Don't stack branches. If main moves forward, rebase before merging:
-
-```bash
-git fetch origin main
-git rebase origin/main
-git push --force-with-lease
-```
+Each piece of work gets its own branch, based on current main. Don't stack branches. If main moves forward, rebase before merging.
 
 ## What Belongs on a Branch
 
