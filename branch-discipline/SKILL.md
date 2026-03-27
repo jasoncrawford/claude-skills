@@ -28,7 +28,7 @@ main is read-only. Always.
 
 Whether you need a worktree depends on your environment:
 
-- **Isolated checkout** (e.g., a brunel worker with its own cloned workspace): just create a branch — you're already isolated.
+- **Isolated checkout** (e.g., a worker agent with its own cloned workspace): just create a branch — you're already isolated.
 - **Shared checkout** (a repo directory used by multiple agents or by a human alongside you): use a worktree to avoid cross-contamination. See the `superpowers:using-git-worktrees` skill.
 
 ## Workflow
