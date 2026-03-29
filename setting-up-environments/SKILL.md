@@ -69,6 +69,31 @@ Tests must never read or write the dev database. Common isolation strategies:
 
 Pick the lightest option that gives you full isolation. For most projects, a separate schema or database on localhost is sufficient.
 
+#### Parallel test workers: scope your truncation
+
+When a test runner executes test files in parallel (e.g., Vitest workers, Jest `--runInBand=false`), each file runs in its own process but all share the same database. A `beforeEach` that truncates **all** tables will delete rows that a concurrent file just inserted, causing intermittent failures that only appear under parallelism.
+
+**Rule: each test file's `beforeEach` truncates only the tables that file owns.**
+
+```typescript
+// ❌ db.tasks.test.ts — deletes webhook_events too, breaking db.test.ts running in parallel
+beforeEach(async () => {
+  await Promise.all([
+    supabase.from("webhook_events").delete().gt("id", 0),
+    supabase.from("foreman_messages").delete().gt("id", 0),
+    supabase.from("tasks").delete().neq("task_id", ""),
+    supabase.from("task_assignments").delete().neq("task_id", ""),
+  ]);
+});
+
+// ✅ db.tasks.test.ts — only touches the table this file uses
+beforeEach(async () => {
+  await supabase.from("tasks").delete().neq("task_id", "");
+});
+```
+
+A shared `truncateAllTables()` helper is fine for a global teardown that runs after the entire suite, but not for per-test `beforeEach` when files run in parallel.
+
 ### 5. Loading the right config
 
 Your test runner loads `.env.test`. Your dev server loads `.env`. Production reads from the hosting platform. Keep the loading mechanism simple and explicit.
@@ -123,6 +148,7 @@ For Supabase-specific setup details (GitHub integration config, seed file format
 | `.env.local` checked into git | Add to `.gitignore`. Local overrides are personal. |
 | Environment inheritance (`dotenv-flow`, `.env.base`) | Replace with flat, standalone files. Repetition is fine. |
 | Tests pointing at a cloud database | Run the database locally. Cloud = slow, flaky, shared state. |
+| `beforeEach` truncates all tables across parallel test files | Each file truncates only its own tables — shared truncation causes concurrent files to lose data. |
 | Dev pointing at a shared cloud database | Run locally. Use Supabase CLI, Docker Compose, etc. Cloud is for production. |
 | Tool auto-loading `.env` clobbers test config | Keep differing variables out of `.env`, or use explicit loading that doesn't merge. |
 
