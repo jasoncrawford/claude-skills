@@ -293,6 +293,9 @@ If you see `failed to parse config: 'db' has invalid keys:`, remove the offendin
 | Realtime not working locally | Table not added to realtime publication | Add `ALTER PUBLICATION supabase_realtime ADD TABLE your_table;` to migration |
 | Deploy works but API returns 500 | Missing env vars in Vercel dashboard | Check all required vars are set for the Production environment |
 | Supabase project pauses on free tier | No activity for 7 days | Visit the dashboard to unpause; set a reminder if tests depend on cloud |
+| `supabase db push` fails with `unknown flag: --project-ref` | The `--project-ref` flag was removed from newer CLI versions | Remove the flag; pass the project ref via `SUPABASE_PROJECT_ID` env var instead |
+| `supabase db push` fails with "IPv6 is not supported on your current network" | GitHub Actions runners don't support IPv6; Supabase resolves to an IPv6 address | Run `supabase link --project-ref $REF` as a step before `db push` — this caches the IPv4 connection pooler URL |
+| Migration workflow fix merged but migrations still not applied | The migrate workflow only triggers on `supabase/migrations/**` path changes; a workflow-only fix won't re-trigger it | Add `workflow_dispatch` to the workflow so it can be manually triggered from the Actions tab |
 | Branching seed file not found (`supabase/supabase/seed.sql`) | GitHub integration "Supabase directory" set to `supabase` instead of `.` | Change to `.` in Project Settings > Integrations > GitHub |
 | Branching config parse error (`invalid keys`) | `health_timeout` or other newer config keys not supported by branching CLI | Remove the unsupported key from `config.toml` |
 | Seed runs but login fails silently | `crypt()`/`gen_salt()` not in search path, or `DO $$` block swallowing errors | Use `extensions.crypt()`, plain INSERTs, and include `auth.identities` row |
