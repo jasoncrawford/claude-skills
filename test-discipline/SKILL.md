@@ -41,6 +41,24 @@ A test at the wrong level of abstraction adds zero value, even if it passes and 
 
 **Red flag:** If your test doesn't exercise any production code path that was broken before the fix, it's testing the wrong thing. Ask: "Would this test have caught the bug if I hadn't already fixed it?"
 
+## Testing Models: Real DB vs. Mocks
+
+Match the approach to what's actually being tested:
+
+**Use a real DB** when the test is verifying DB behavior — constraints, timestamps, queries, state transitions that depend on what's persisted. Mocks here give false confidence.
+
+**Mock the model layer** when the test is verifying logic *above* the DB — routing, protocol, event handling, business rules. Use `vi.spyOn` on static finders and a `fromTest()` factory to construct instances without hitting the DB:
+
+```typescript
+const task = Task.fromTest({ task_id: "t1", issue_number: 42, title: "Fix bug" });
+vi.spyOn(Task, "getByIssue").mockResolvedValue(task);
+vi.spyOn(task, "assign").mockImplementation(async (workerId) => {
+  task.workerId = workerId; // mirror what the real method does in memory
+});
+```
+
+**Anti-pattern: parallel in-memory implementations** — A `createMemoryStore()` that duplicates the real store's behavior just to avoid spinning up a DB. This drifts from the real implementation and gives false confidence. Use `fromTest()` + `vi.spyOn` instead.
+
 ## Not Acceptable
 
 - Writing no new test for a bug fix ("the bug was obvious, no test needed")
