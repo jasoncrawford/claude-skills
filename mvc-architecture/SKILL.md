@@ -36,6 +36,8 @@ Database access lives in the model layer. The DB is part of the domain: it's how
 
 ## Common Anti-Patterns
 
+**Multiple representations of the same concept** — Separate types for the same domain object (e.g. a `Task` interface, a `TaskRow` DB type, and a `TaskStore` abstraction all representing tasks). Pick one canonical model class and use it everywhere — persistence, routing, queuing, wire protocol. See `active-record-model` skill for how to structure it.
+
 **Fat controller** — Business logic accumulating in the controller because "it's just a few lines." Those lines grow. Move them to a model method.
 
 ```typescript
