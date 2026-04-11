@@ -74,6 +74,17 @@ Task.events.on("changed", () => adminWss.broadcastSnapshot());
 
 This keeps the model ignorant of its observers. Any number of subscribers (dashboard, logger, test spy) can listen without the model knowing about them.
 
+**Where to subscribe:** Observers should wire themselves up in their own constructor, not in the entry point (`index.ts`). If `TaskManager` needs to react to task changes, its constructor calls `Task.events.on(...)` — it owns that relationship. The entry point just instantiates the classes; it shouldn't know which models which observers care about.
+
+```typescript
+export class TaskManager extends EventEmitter {
+  constructor() {
+    super();
+    Task.events.on("changed", () => this.emit("changed")); // TaskManager owns this wiring
+  }
+}
+```
+
 ## In-Memory Models
 
 Non-DB models follow the same pattern with a module-level Map:
