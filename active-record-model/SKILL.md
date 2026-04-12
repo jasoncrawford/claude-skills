@@ -104,6 +104,23 @@ export class Worker {
 
 No separate registry/store class needed — the Map is an implementation detail of the model.
 
+**Test isolation:** Add a `_reset()` static that clears the Map, and call it in `beforeEach`. Because the Map is module-level (not instance-level), tests share state across runs without an explicit reset.
+
+```typescript
+export class Worker {
+  static _reset(): void { registry.clear(); }
+}
+
+// in tests:
+beforeEach(() => Worker._reset());
+```
+
+**Max listeners warning:** If tests spin up many instances that each subscribe to `Model.events`, Node.js will warn about a potential memory leak. Suppress it at module level:
+
+```typescript
+Worker.events.setMaxListeners(0); // at bottom of worker-registry.ts
+```
+
 ## Testing
 
 For tests that don't need the DB, mock at the model level:
