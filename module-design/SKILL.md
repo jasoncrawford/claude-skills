@@ -29,6 +29,8 @@ import { TaskQueue } from "./task-queue.js";
 import { WorkerRegistry } from "./worker-registry.js";
 ```
 
+**When splitting a file, update all callers.** The right response to "callers import from the old file" is to update every caller to import from the new file — not to add re-exports from the old file so callers don't have to change. Re-exports for this reason are especially harmful: they make the split look complete while leaving the old coupling intact. Update all callers, even if there are many. This is not optional.
+
 **No barrel files.** An `index.ts` that re-exports everything from sibling modules is a re-export with extra steps. It obscures where things live and defeats tree-shaking. If a directory needs an entry point, it should contain the module's own code, not a list of re-exports.
 
 ## Objects Over Loose Functions
@@ -51,6 +53,26 @@ export class TaskQueue {
 ```
 
 This eliminates the repeated parameter, makes the shared state explicit, and gives consumers a single import instead of many.
+
+**Module-level mutable state is the same anti-pattern.** A module with `let` variables at the top and exported functions that close over them is just a singleton written badly — it has all the downsides (hidden state, untestable, can't have two instances) with none of the clarity of a class.
+
+```typescript
+// BAD — module-level state + exported functions = implicit singleton
+let _active = false;
+let _text = "";
+export function start(getText: () => string) { _active = true; ... }
+export function stop() { _active = false; ... }
+export function update() { _text = ...; }
+
+// GOOD — explicit class, state is visible and owned
+export class StatusBar {
+  private active = false;
+  private text = "";
+  start(getText: () => string) { this.active = true; ... }
+  stop() { this.active = false; ... }
+  update() { this.text = ...; }
+}
+```
 
 ## Module Boundaries
 
