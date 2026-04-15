@@ -121,6 +121,30 @@ useEffect(() => {
 | **Subscribe once in `start()`** | Adding the subscription to call sites recreates the scattered-calls problem. |
 | **`update()` uses `"key" in patch`** | Distinguishes "set to undefined" (clear) from "not mentioned" (leave unchanged). |
 
+## The Renderer Is Also a Class
+
+The reactive model pattern applies to the renderer too. The renderer has its own state (interval timers, active flags, text buffers, registered callbacks) — don't spread that across module-level variables. Make it a class.
+
+```typescript
+// BAD — module-level state + functions = implicit singleton
+let _active = false;
+let _text = "";
+let _interval: ReturnType<typeof setInterval> | null = null;
+export function startStatus(getText: () => string) { ... }
+export function stopStatus() { ... }
+
+// GOOD — renderer owns its state explicitly
+export class StatusBarRenderer {
+  private active = false;
+  private text = "";
+  private interval: ReturnType<typeof setInterval> | null = null;
+  start(getText: () => string) { ... }
+  stop() { ... }
+}
+```
+
+The model holds domain state and emits events. The renderer subscribes and draws. Both should be classes.
+
 ## Common Mistakes
 
 **Timer in the consumer, not the model:**
