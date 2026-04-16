@@ -145,6 +145,55 @@ export class StatusBarRenderer {
 
 The model holds domain state and emits events. The renderer subscribes and draws. Both should be classes.
 
+## View-Models: Aggregating Multiple Models
+
+A view-model aggregates state from multiple upstream models into a single renderable snapshot. It subscribes to each upstream model (like a view would) but also owns its own state and emits `"change"` (like a model would). The display subscribes only to the view-model.
+
+```
+Settings (model) ──┐
+                   ▼
+WorkerSession ──▶ StatusBar (view-model) ──▶ display (view)
+                   ▲
+                  ...
+```
+
+```typescript
+// Settings owns preferences; emits "change" on any update
+class Settings extends EventEmitter {
+  private _model: string | undefined;
+  get model() { return this._model; }
+  private _setModel(v: string | undefined): void { this._model = v; this.emit("change"); }
+}
+
+// StatusBar is a view-model: owns session state AND mirrors settings fields
+class StatusBar extends EventEmitter {
+  private _model: string | undefined;      // mirrored from Settings
+  private _connectionStatus = "idle";      // owned directly
+
+  constructor({ agentId, settings }: { agentId: string; settings?: Settings }) {
+    super();
+    if (settings) {
+      this._model = settings.model;        // initialise from current state
+      settings.on("change", () => {
+        this._model = settings.model;
+        this.emit("change");               // propagate to display
+      });
+    }
+  }
+
+  update(patch: { connectionStatus?: string }): void {
+    if (patch.connectionStatus) this._connectionStatus = patch.connectionStatus;
+    this.emit("change");
+  }
+}
+```
+
+Key points:
+- The view-model initialises from each upstream model's current state in the constructor, then subscribes.
+- It re-emits `"change"` so the display stays in sync regardless of which upstream changed.
+- Pass upstream models as constructor arguments so subscriptions are established at creation time.
+- Use `import type` for type-only references when two classes reference each other's types.
+
 ## Common Mistakes
 
 **Timer in the consumer, not the model:**
