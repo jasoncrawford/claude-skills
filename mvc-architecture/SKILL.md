@@ -157,3 +157,41 @@ The pattern: **inject domain dependencies; access infrastructure directly.**
 **DRY** — Multiple controllers (REST endpoint, WebSocket handler, CLI command) can share the same model methods instead of duplicating logic.
 
 **Readability** — When a controller is thin, you can read it as a table of contents: "on this input, do this action, return this response." The details live in well-named model methods.
+
+## Composition Over Inheritance Between Controllers
+
+When one controller needs the capabilities of another — for example, a command dispatcher that uses a command registry — prefer **composition** (has-a) over **inheritance** (is-a). Inheritance implies a subtype relationship; composition is more honest about what's actually happening.
+
+```typescript
+// BAD — inheritance blurs the role boundary
+class CommandController extends CommandRegistry {
+  dispatch(input: string) { /* uses inherited register/lookup */ }
+}
+// Now a CommandController *is* a CommandRegistry — callers can't tell them apart.
+
+// GOOD — composition makes the relationship explicit
+class CommandRegistry {
+  register(name: string, opts: CommandOpts): void { ... }
+  lookup(name: string): CommandEntry | undefined { ... }
+}
+class CommandController {
+  constructor(private readonly registry: CommandRegistry) {}
+  dispatch(input: string) { /* calls this.registry.lookup() */ }
+}
+// Callers that only register commands accept CommandRegistry.
+// Callers that dispatch accept CommandController.
+```
+
+**Narrow interfaces for dependency injection.** When a controller receives a dependency like a display object, type it as a narrow interface with only the methods that controller actually calls. This keeps coupling minimal and lets tests pass lightweight stubs without casts.
+
+```typescript
+// GOOD — only the methods this controller uses
+interface WorkerDisplay {
+  print(line: string | null): void;
+  printForemanMessage(msg: Wire.ForemanMessage): void;
+}
+class WorkerSession {
+  constructor(private display: WorkerDisplay) {}
+}
+// Tests can pass { print: vi.fn(), printForemanMessage: vi.fn() } without any cast.
+```
