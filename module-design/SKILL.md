@@ -54,6 +54,26 @@ export class TaskQueue {
 
 This eliminates the repeated parameter, makes the shared state explicit, and gives consumers a single import instead of many.
 
+**When a module has one primary class, make that class the only value export.** Constants, lookup tables, factory functions, and cache helpers that belong conceptually to the class should be static members of the class — not top-level exports alongside it. This keeps the class self-contained, reduces the exported surface, and makes the relationship explicit.
+
+```typescript
+// BAD — companion constants and helpers exported alongside the class
+export const EFFORT_LEVELS = [...] as const;
+export type EffortValue = typeof EFFORT_LEVELS[number];
+export function findModel(models: ModelInfo[], id: string) { ... }
+export function getCachedModels() { ... }
+export class Settings { ... }  // one class among many exports
+
+// GOOD — class is the only value export; companions are static members
+export class Settings {
+  static readonly EFFORT_LEVELS = [...] as const;
+  static findModel(models: ModelInfo[], id: string) { ... }
+  static getCachedModels() { ... }
+  // ...instance members
+}
+export type EffortValue = typeof Settings.EFFORT_LEVELS[number]; // type export is fine
+```
+
 **Module-level mutable state is the same anti-pattern.** A module with `let` variables at the top and exported functions that close over them is just a singleton written badly — it has all the downsides (hidden state, untestable, can't have two instances) with none of the clarity of a class.
 
 ```typescript
