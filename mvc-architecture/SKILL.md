@@ -73,10 +73,82 @@ display.print(view.formatAssignment(task, worker));
 
 ## Applies To Both Client and Server
 
-This separation works the same way regardless of context:
+The layers map differently depending on context, but the principle is the same: models own domain logic, controllers handle I/O, views handle rendering.
 
-- **Server**: Model = domain objects + DB operations. Controller = HTTP/WebSocket handlers. View = response formatting, log formatting, admin dashboard data.
-- **Client/frontend**: Model = state management + business rules. Controller = event handlers, form submission, routing. View = components, templates, rendering.
+### Server
+
+- **Model** — domain objects, DB queries, persistence, business rules
+- **Controller** — HTTP/WebSocket handlers: parse request → call model → format response
+- **View** — response formatting, log formatting, dashboard data shapes
+
+### CLI / Terminal App
+
+- **Model** — domain state and operations. A `Workspace` class that manages a git checkout, a `Settings` class that owns user preferences, a connection-state object. No display calls — these classes should emit events or return values, never call `print()` directly.
+- **Controller** — handles input and coordinates. In a terminal app there are typically two kinds: a **REPL controller** (reads user input, dispatches commands) and a **protocol controller** (handles messages from an external source — a WebSocket, a daemon, a server). Controllers receive a `display` object and call it directly. That's appropriate: I/O is their job.
+- **View** — the display object(s): renders text to stdout, manages status bars, formats diffs. A `Display` class with methods like `print()`, `printDiff()`, `printError()`. Receives config (e.g. verbose flag) in its constructor. The status bar is a reactive view-model that subscribes to model events and re-renders on change.
+
+**The key anti-pattern for client code:** models calling display functions directly.
+
+```typescript
+// BAD — model knows about display
+class Workspace {
+  async reset() {
+    await this._doReset();
+    display.print("Workspace reset.");  // ← model shouldn't know about display
+  }
+}
+
+// GOOD — model emits an event; controller or view handles display
+class Workspace extends EventEmitter {
+  async reset() {
+    await this._doReset();
+    this.emit("reset");                 // ← model just says what happened
+  }
+}
+
+// In the controller that owns the workspace:
+workspace.on("reset", () => display.print("Workspace reset."));
+```
+
+### Web Frontend (React / similar)
+
+- **Model** — state atoms, stores, or context. Business rules and data transformations.
+- **Controller** — event handlers, form submission logic, routing, data-fetching hooks.
+- **View** — components, templates, CSS. Reads from model/store, calls controller handlers on user action.
+
+## Dependency Management Across Layers
+
+**Global infrastructure** (config, database, external API clients) — these are process-wide singletons. It's fine for any layer to access them directly via a module import or `getConfig()`. They don't need to be injected.
+
+**Domain objects** (models, views, controllers) — these should either receive their dependencies via constructor injection, or create what they need with `new` at the point of use. Don't reach for a global when a constructor parameter is cleaner.
+
+```typescript
+// GOOD — Display is a view object; it receives config at construction
+class Display {
+  constructor(private config: BrunelConfig) {}
+  print(line: string) {
+    if (this.config.verbose) { ... }
+  }
+}
+
+// GOOD — controller receives the display it needs
+class WorkerSession {
+  constructor(private display: Display, ...) {}
+  onTaskAssigned(task: Task) {
+    this.display.print(`Task #${task.number} assigned.`);
+  }
+}
+
+// BAD — model reaching for a global display
+class Workspace {
+  async create() {
+    // ...
+    display.print("Created.");  // ← don't import display as a global in a model
+  }
+}
+```
+
+The pattern: **inject domain dependencies; access infrastructure directly.**
 
 ## Why This Matters
 
