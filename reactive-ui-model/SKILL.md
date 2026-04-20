@@ -95,8 +95,10 @@ class StatusModel extends EventEmitter {
 ```typescript
 start(): void {
   // Subscribe ONCE. All future state changes auto-refresh the display.
+  // The display (or its renderer) formats the model state — don't put
+  // getStatusText() on the model. Formatting is a view concern.
   this.statusModel.on("change", () => this.display.updateStatusBar?.());
-  this.display.startStatusBar?.(() => this.statusModel.getStatusText());
+  this.display.startStatusBar?.(() => this.renderer.fmtStatusBar(this.statusModel, this.width));
   // ... rest of startup
 }
 ```
@@ -120,6 +122,7 @@ useEffect(() => {
 | **Batch multiple fields in one `update()` call** | One mutation → one "change" event → one re-render, not N. |
 | **Subscribe once in `start()`** | Adding the subscription to call sites recreates the scattered-calls problem. |
 | **`update()` uses `"key" in patch`** | Distinguishes "set to undefined" (clear) from "not mentioned" (leave unchanged). |
+| **No `getStatusText()` on the model** | Text formatting (ANSI codes, padding, layout) is a view concern. The model exposes state via getters; the renderer produces the display string. Putting `getStatusText()` on the model leaks view logic into the model layer and duplicates what the renderer already does. |
 
 ## The Renderer Is Also a Class
 
@@ -228,4 +231,22 @@ model.on("change", () => {
   model.on("change", () => display.refresh()); // duplicate listeners pile up
 });
 // ✓ subscribe once in start()
+```
+
+**Putting getStatusText() on the model:**
+```typescript
+// ❌ model formats its own display string — view logic leaking into model layer
+class StatusModel {
+  getStatusText(): string {
+    return `worker ${shortId} ∙ ${this._task} | ${this._status}`; // formatting here
+  }
+}
+display.startBar(() => model.getStatusText());
+
+// ✓ model exposes state via getters; renderer formats
+class StatusModel {
+  get taskName() { return this._task; }
+  get connectionStatus() { return this._status; }
+}
+display.startBar(() => renderer.fmtStatusBar(model, terminalWidth));
 ```
