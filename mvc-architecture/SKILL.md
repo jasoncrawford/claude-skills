@@ -125,22 +125,22 @@ workspace.on("reset", () => display.print("Workspace reset."));
 ```typescript
 // GOOD — Display is a view object; it receives config at construction
 class Display {
-  constructor(private config: BrunelConfig) {}
+  constructor(private config: AppConfig) {}
   print(line: string) {
     if (this.config.verbose) { ... }
   }
 }
 
 // GOOD — controller receives the display it needs
-class WorkerSession {
+class RequestHandler {
   constructor(private display: Display, ...) {}
-  onTaskAssigned(task: Task) {
-    this.display.print(`Task #${task.number} assigned.`);
+  onOrderCreated(order: Order) {
+    this.display.print(`Order #${order.number} created.`);
   }
 }
 
 // BAD — model reaching for a global display
-class Workspace {
+class Repository {
   async create() {
     // ...
     display.print("Created.");  // ← don't import display as a global in a model
@@ -186,12 +186,12 @@ class CommandController {
 
 ```typescript
 // GOOD — only the methods this controller uses
-interface WorkerDisplay {
+interface AppDisplay {
   print(line: string | null): void;
-  printForemanMessage(msg: Wire.ForemanMessage): void;
+  printEvent(event: AppEvent): void;
 }
-class WorkerSession {
-  constructor(private display: WorkerDisplay) {}
+class EventProcessor {
+  constructor(private display: AppDisplay) {}
 }
-// Tests can pass { print: vi.fn(), printForemanMessage: vi.fn() } without any cast.
+// Tests can pass { print: vi.fn(), printEvent: vi.fn() } without any cast.
 ```

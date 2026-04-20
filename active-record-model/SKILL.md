@@ -16,14 +16,14 @@ For every DB table, there is exactly one model class. Non-DB models (in-memory o
 Initialize the DB client once at startup, shared across all models:
 
 ```typescript
-// src/foreman/db-client.ts
-export let db: SupabaseClient<Database>;
-export function initDb(supabase: SupabaseClient<Database>): void { db = supabase; }
+// src/db-client.ts
+export let db: DbClient<Database>;
+export function initDb(client: DbClient<Database>): void { db = client; }
 ```
 
-Each model imports `db` from there. Never call `initModel(supabase)` separately per class.
+Each model imports `db` from there. Never call `initModel(client)` separately per class.
 
-Use generated types (`supabase gen types typescript --local > src/database.types.ts`) so query results are typed without manual casting.
+Use generated types (e.g. `supabase gen types typescript --local > src/database.types.ts` for Supabase, or your ORM's codegen equivalent) so query results are typed without manual casting.
 
 ## Class Structure
 

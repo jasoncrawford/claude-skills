@@ -97,8 +97,8 @@ start(): void {
   // Subscribe ONCE. All future state changes auto-refresh the display.
   // The display (or its renderer) formats the model state — don't put
   // getStatusText() on the model. Formatting is a view concern.
-  this.statusModel.on("change", () => this.display.updateStatusBar?.());
-  this.display.startStatusBar?.(() => this.renderer.fmtStatusBar(this.statusModel, this.width));
+  this.statusModel.on("change", () => this.display.refresh());
+  this.display.start(() => this.renderer.format(this.statusModel));
   // ... rest of startup
 }
 ```
@@ -153,32 +153,32 @@ The model holds domain state and emits events. The renderer subscribes and draws
 A view-model aggregates state from multiple upstream models into a single renderable snapshot. It subscribes to each upstream model (like a view would) but also owns its own state and emits `"change"` (like a model would). The display subscribes only to the view-model.
 
 ```
-Settings (model) ──┐
-                   ▼
-WorkerSession ──▶ StatusBar (view-model) ──▶ display (view)
-                   ▲
-                  ...
+UserPreferences (model) ──┐
+                           ▼
+Connection ──▶ AppStatus (view-model) ──▶ display (view)
+                           ▲
+                          ...
 ```
 
 ```typescript
-// Settings owns preferences; emits "change" on any update
-class Settings extends EventEmitter {
-  private _model: string | undefined;
-  get model() { return this._model; }
-  private _setModel(v: string | undefined): void { this._model = v; this.emit("change"); }
+// UserPreferences owns user settings; emits "change" on any update
+class UserPreferences extends EventEmitter {
+  private _theme: string | undefined;
+  get theme() { return this._theme; }
+  setTheme(v: string | undefined): void { this._theme = v; this.emit("change"); }
 }
 
-// StatusBar is a view-model: owns session state AND mirrors settings fields
-class StatusBar extends EventEmitter {
-  private _model: string | undefined;      // mirrored from Settings
+// AppStatus is a view-model: owns session state AND mirrors preferences fields
+class AppStatus extends EventEmitter {
+  private _theme: string | undefined;      // mirrored from UserPreferences
   private _connectionStatus = "idle";      // owned directly
 
-  constructor({ agentId, settings }: { agentId: string; settings?: Settings }) {
+  constructor({ sessionId, preferences }: { sessionId: string; preferences?: UserPreferences }) {
     super();
-    if (settings) {
-      this._model = settings.model;        // initialise from current state
-      settings.on("change", () => {
-        this._model = settings.model;
+    if (preferences) {
+      this._theme = preferences.theme;     // initialise from current state
+      preferences.on("change", () => {
+        this._theme = preferences.theme;
         this.emit("change");               // propagate to display
       });
     }

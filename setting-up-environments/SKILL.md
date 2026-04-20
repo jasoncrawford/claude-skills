@@ -76,19 +76,19 @@ When a test runner executes test files in parallel (e.g., Vitest workers, Jest `
 **Rule: each test file's `beforeEach` truncates only the tables that file owns.**
 
 ```typescript
-// ❌ db.tasks.test.ts — deletes webhook_events too, breaking db.test.ts running in parallel
+// ❌ orders.test.ts — deletes events too, breaking events.test.ts running in parallel
 beforeEach(async () => {
   await Promise.all([
-    supabase.from("webhook_events").delete().gt("id", 0),
-    supabase.from("foreman_messages").delete().gt("id", 0),
-    supabase.from("tasks").delete().neq("task_id", ""),
-    supabase.from("task_assignments").delete().neq("task_id", ""),
+    db.from("events").delete().gt("id", 0),
+    db.from("notifications").delete().gt("id", 0),
+    db.from("orders").delete().neq("id", ""),
+    db.from("order_items").delete().neq("id", ""),
   ]);
 });
 
-// ✅ db.tasks.test.ts — only touches the table this file uses
+// ✅ orders.test.ts — only touches the table this file uses
 beforeEach(async () => {
-  await supabase.from("tasks").delete().neq("task_id", "");
+  await db.from("orders").delete().neq("id", "");
 });
 ```
 

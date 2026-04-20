@@ -58,20 +58,20 @@ This eliminates the repeated parameter, makes the shared state explicit, and giv
 
 ```typescript
 // BAD — companion constants and helpers exported alongside the class
-export const EFFORT_LEVELS = [...] as const;
-export type EffortValue = typeof EFFORT_LEVELS[number];
-export function findModel(models: ModelInfo[], id: string) { ... }
-export function getCachedModels() { ... }
-export class Settings { ... }  // one class among many exports
+export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
+export type LogLevel = typeof LOG_LEVELS[number];
+export function findHandler(handlers: HandlerInfo[], id: string) { ... }
+export function getCachedHandlers() { ... }
+export class Logger { ... }  // one class among many exports
 
 // GOOD — class is the only value export; companions are static members
-export class Settings {
-  static readonly EFFORT_LEVELS = [...] as const;
-  static findModel(models: ModelInfo[], id: string) { ... }
-  static getCachedModels() { ... }
+export class Logger {
+  static readonly LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
+  static findHandler(handlers: HandlerInfo[], id: string) { ... }
+  static getCachedHandlers() { ... }
   // ...instance members
 }
-export type EffortValue = typeof Settings.EFFORT_LEVELS[number]; // type export is fine
+export type LogLevel = typeof Logger.LOG_LEVELS[number]; // type export is fine
 ```
 
 **Module-level mutable state is the same anti-pattern.** A module with `let` variables at the top and exported functions that close over them is just a singleton written badly — it has all the downsides (hidden state, untestable, can't have two instances) with none of the clarity of a class.

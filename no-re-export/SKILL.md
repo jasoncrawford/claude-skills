@@ -13,25 +13,25 @@ Re-exporting a symbol from another module creates a phantom dependency: the cons
 
 ## The Most Common Temptation: Splitting a File
 
-You move symbols from `display.ts` into a new `status-bar.ts`. Many files import from `display.ts`. Rather than updating all those imports, you add re-exports to `display.ts`:
+You move symbols from `api.ts` into a new `http-client.ts`. Many files import from `api.ts`. Rather than updating all those imports, you add re-exports to `api.ts`:
 
 ```typescript
 // BAD — re-exporting to avoid updating callers
-export { startStatus, stopStatus, verbose } from "./status-bar.js";
+export { request, buildHeaders, retry } from "./http-client.js";
 ```
 
-This feels safe, but it defeats the purpose of the split. The old coupling is still there, just hidden. `display.ts` still "contains" everything it did before, from the consumer's perspective.
+This feels safe, but it defeats the purpose of the split. The old coupling is still there, just hidden. `api.ts` still "contains" everything it did before, from the consumer's perspective.
 
 **The right move: update all callers.** Find every file that imports the moved symbols and change those imports to point at the new module. This is not optional, even if there are many callers.
 
 ```bash
 # Find all callers to update
-grep -r "from.*display" src/
+grep -r "from.*api" src/
 ```
 
 ```typescript
 // Update each caller directly
-import { startStatus, stopStatus } from "./status-bar.js";  // was display.js
+import { request, buildHeaders } from "./http-client.js";  // was api.js
 ```
 
 ## Barrel Files Are the Same Anti-Pattern
