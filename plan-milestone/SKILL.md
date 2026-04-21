@@ -49,13 +49,19 @@ Present a dependency graph so the sequencing is clear. Get user approval and ite
 - Put infrastructure/foundation issues first; higher-level features later
 - Avoid issues that are just "glue" with no clear deliverable
 
-### 3. Design doc (if needed)
+### 3. Write and commit a design doc
 
-If there's architecture, data model decisions, or API contracts that don't fit neatly in issue bodies, offer to write a design doc first:
+Always write a design doc before filing issues. The doc is the authoritative record of what was decided and why — individual issue bodies are too narrow to capture the full picture, and workers need the context.
 
-> "Before I file the issues, is there anything worth capturing in a short design doc (e.g. data model, API shape, overall approach)? I can write it to `docs/` and reference it from the issues."
+Write to `docs/YYYY-MM-DD-<feature>.md`. Include:
+- **Goal** — what capability this milestone delivers
+- **Approach** — key decisions made during clarification (architecture, data model, API shape, etc.)
+- **Open questions** — anything explicitly deferred
+- **Issue breakdown** — the full list with dependencies (fill in issue numbers after filing)
 
-If yes, write to `docs/YYYY-MM-DD-<feature>.md`, commit it, then proceed.
+Commit the doc to the repo before filing issues, then reference it in every issue body:
+
+> See design doc: `docs/YYYY-MM-DD-<feature>.md`
 
 ### 4. Create the GitHub milestone
 
@@ -73,12 +79,14 @@ echo "Milestone #$MILESTONE created"
 
 File issues **in dependency order** — blockers first, so their issue numbers are known before they're referenced.
 
-For each issue:
+For each issue, include a reference to the design doc in the body:
 
 ```bash
 gh issue create \
   --title "<title>" \
   --body "<description>
+
+See design doc: \`docs/YYYY-MM-DD-<feature>.md\`
 
 Depends on #N" \
   --milestone "<milestone title>"
