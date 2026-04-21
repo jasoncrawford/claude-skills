@@ -29,9 +29,22 @@ Start with the description in $ARGUMENTS. Ask clarifying questions — **one at 
 
 **If significant design work is still needed** (product spec, architecture decisions, data model choices), suggest running `superpowers:brainstorming` first. This skill assumes enough clarity to break down the work into issues.
 
-### 2. Propose the work breakdown
+### 2. Trace the data flow before proposing issues
 
-Once you understand the goal, propose:
+Before proposing any issue breakdown, **read the code** and trace how the change ripples through the system. Walk the key data/control flow paths end-to-end (e.g. "webhook arrives → repo resolved → task looked up → blocker graph checked → task assigned to worker") and identify every internal assumption that breaks.
+
+Specifically:
+- What data structures, lookups, or caches assume the current design?
+- What needs to change at the data layer before feature-level work can land cleanly?
+- Are there shared in-memory structures that need scoping or partitioning?
+
+This is the most important step. Feature-level issues ("dashboard shows repos", "workers announce repo") are easy to see. The foundational refactoring underneath them ("TaskManager's in-memory state is keyed by bare numbers and collides across repos") is what gets missed — and discovering it mid-implementation causes painful rebasing chains.
+
+**File infrastructure/refactoring issues first**, then feature issues on top.
+
+### 3. Propose the work breakdown
+
+Once you understand both the goal and the internal ripple effects, propose:
 
 - **Milestone title** — short, describes the capability being built
 - **Milestone description** — 1–2 sentences: goal + definition of done
@@ -49,7 +62,7 @@ Present a dependency graph so the sequencing is clear. Get user approval and ite
 - Put infrastructure/foundation issues first; higher-level features later
 - Avoid issues that are just "glue" with no clear deliverable
 
-### 3. Write and commit a design doc
+### 4. Write and commit a design doc
 
 Always write a design doc before filing issues. The doc is the authoritative record of what was decided and why — individual issue bodies are too narrow to capture the full picture, and workers need the context.
 
@@ -63,7 +76,7 @@ Commit the doc to the repo before filing issues, then reference it in every issu
 
 > See design doc: `docs/YYYY-MM-DD-<feature>.md`
 
-### 4. Create the GitHub milestone
+### 5. Create the GitHub milestone
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
@@ -75,7 +88,7 @@ MILESTONE=$(gh api repos/$REPO/milestones \
 echo "Milestone #$MILESTONE created"
 ```
 
-### 5. File the issues
+### 6. File the issues
 
 File issues **in dependency order** — blockers first, so their issue numbers are known before they're referenced.
 
@@ -106,7 +119,7 @@ The foreman parses `depends on` and `blocked by` (case-insensitive, with optiona
 
 For issues with no dependencies, omit the depends-on line entirely.
 
-### 6. Summary
+### 7. Summary
 
 After filing all issues, report:
 
