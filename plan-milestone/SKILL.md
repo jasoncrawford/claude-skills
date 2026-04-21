@@ -81,9 +81,10 @@ gh issue create \
   --body "<description>
 
 Depends on #N" \
-  --milestone "<milestone title>" \
-  --label "brunel:ready"
+  --milestone "<milestone title>"
 ```
+
+Do **not** add the `brunel:ready` label — leave that to the user.
 
 **Dependency format recognized by the foreman:**
 
