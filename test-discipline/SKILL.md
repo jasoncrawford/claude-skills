@@ -37,6 +37,17 @@ A test at the wrong level of abstraction adds zero value, even if it passes and 
 | Wrong URL, path, or config passed across a boundary | Integration test verifying the connection works end-to-end | Unit test asserting the string value |
 | Display or terminal behavior (text output, ordering) | Capture stdout and assert on what the user actually sees | Check that an internal callback fired or a module variable was set |
 
+**For display/TUI tests, "what the user sees" means semantic text content — not terminal control sequences.** Escape codes (`\x1b[K`, cursor movements) are themselves internal mechanisms of the display layer, not user-visible outcomes.
+
+| ❌ Still a mechanism test | ✅ Behavioral |
+|---|---|
+| `expect(events).toEqual(["clearBar", "option", "drawBar"])` | Status bar text ("Connected") appears after option text in stdout |
+| Check for `\x1b[K` before option text | Status bar text appears after option text (clearBar ran, we don't care how) |
+| `expect(display.persistentActive).toBe(true)` | `expect(stdout).toContain("Connected")` |
+| Mock display, assert callback order | Real Display, assert on rendered content |
+
+**Diagnostic question — apply before finalizing any test:** *"Would this test fail if the bug existed but was fixed through a completely different mechanism?"* If no, you are testing the fix's implementation, not the behavior the fix restores. Rewrite the test to assert on the user-visible outcome directly.
+
 **Integration bugs need integration tests.** If the bug is "A couldn't talk to B because of a wrong path/protocol/format," a unit test that checks the path string is just testing string concatenation — it doesn't prove A and B can actually connect. Use real instances of both.
 
 **Red flag:** If your test doesn't exercise any production code path that was broken before the fix, it's testing the wrong thing. Ask: "Would this test have caught the bug if I hadn't already fixed it?"
