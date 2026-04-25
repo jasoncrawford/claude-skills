@@ -121,6 +121,68 @@ beforeEach(() => Worker._reset());
 Worker.events.setMaxListeners(0); // at bottom of worker-registry.ts
 ```
 
+## Base Class (Optional Pattern)
+
+When several models share the same CRUD boilerplate, extract it into an abstract base class rather than repeating it in each model:
+
+```typescript
+export abstract class ActiveRecord {
+  protected static readonly tableName: string;
+  protected static readonly primaryKey: string;
+
+  // Override in subclasses to add joins, filters, or ordering
+  protected static select() {
+    return (db.from as any)(this.tableName).select("*");
+  }
+
+  static async get(id: string | number): Promise<any> {
+    const { data, error } = await (this as any).select()
+      .eq((this as any).primaryKey, id).maybeSingle();
+    if (error) throw error;
+    return data ? new (this as any)(data) : null;
+  }
+
+  static async insert(data: Record<string, unknown>): Promise<any> {
+    const { data: row, error } = await (db.from as any)((this as any).tableName)
+      .insert(data).select().single();
+    if (error) throw error;
+    return new (this as any)(row);
+  }
+
+  protected async update(changes: Record<string, unknown>): Promise<this> {
+    const cls = this.constructor as typeof ActiveRecord;
+    const { data, error } = await (db.from as any)(cls.tableName)
+      .update(changes).eq(cls.primaryKey, this.getPrimaryKeyValue())
+      .select().single();
+    if (error) throw error;
+    return new (cls as any)(data) as this;
+  }
+}
+
+export class Order extends ActiveRecord {
+  protected static readonly tableName = "orders";
+  protected static readonly primaryKey = "order_id";
+
+  // Narrow the inherited return type
+  static get(id: string): Promise<Order | null> {
+    return super.get(id) as Promise<Order | null>;
+  }
+}
+```
+
+Subclasses can override `select()` to add joins without touching any other CRUD method:
+
+```typescript
+export class Order extends ActiveRecord {
+  protected static select() {
+    // All finders (get, list, getBy) automatically include the join
+    return (db.from as any)(this.tableName).select("*, customers(name)");
+  }
+}
+```
+
+The `as any` casts are intentional — `db.from(tableName)` takes a runtime string so the DB client can't infer per-table types. This is an acceptable trade-off for shared boilerplate; all public API surface still has explicit return types.
+
 ## Testing
 
 For tests that don't need the DB, mock at the model level:
