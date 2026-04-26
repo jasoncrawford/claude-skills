@@ -114,6 +114,7 @@ Before committing any spec, plan, or document: check your current branch. If it 
 - [ ] Branch is based on latest main
 - [ ] Tests written for any new behavior or bug fixes (see `no-skipped-tests`)
 - [ ] All tests pass with zero skipped
+- [ ] Checked whether CLAUDE.md, README, or other project docs need updating to reflect this change; included any updates in this PR
 - [ ] PR created — auto-merge NOT enabled; left for user to review and merge
 - [ ] PR body includes `Closes #N` / `Fixes #N` / `Resolves #N` if this resolves a GitHub issue (a plain link does not auto-close)
 - [ ] CI passing before merge (enforced by branch protection)
