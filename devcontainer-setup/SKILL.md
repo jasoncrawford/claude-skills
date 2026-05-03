@@ -1,138 +1,147 @@
 ---
 name: devcontainer-setup
-description: Use when setting up a new project for containerized Claude Code development, when the user wants to run Claude with --dangerously-skip-permissions safely, or when adding a .devcontainer to an existing project
+description: Use when setting up a new project for containerized Claude Code development, adding .devcontainer to an existing project, or wanting to run Claude with --dangerously-skip-permissions safely
 ---
 
 # Devcontainer Setup for Claude Code
 
 ## Overview
 
-Set up a Docker devcontainer that lets Claude Code run with `--dangerously-skip-permissions` safely. The container provides filesystem isolation and a network firewall while sharing skills, settings, and plugins bidirectionally with the host.
+Set up a Docker devcontainer for Claude Code development. The container provides filesystem isolation, network firewall (restricting outbound traffic to approved domains), and bidirectional sync of skills, settings, and plugins. Supports running Claude with `--dangerously-skip-permissions` safely.
 
 ## When to Use
 
 - Starting a new project that will use Claude Code
 - Adding containerized development to an existing project
-- User wants to skip permission prompts safely
+- Wanting filesystem and network isolation for safe credential handling
+- Wanting faster startup with pre-built base image (vs local builds)
 
 **Not for:** iOS/macOS native development (requires Xcode/macOS toolchain, can't run in Linux containers).
 
 ## Quick Start
 
-Copy the template and customize the firewall:
+Create `.devcontainer/devcontainer.json`:
 
-```bash
-cp -r ~/.devcontainer-template /path/to/project/.devcontainer
-# Edit .devcontainer/init-firewall.sh — add project-specific domains
+```json
+{
+  "name": "Your Project Name",
+  "image": "ghcr.io/jasoncrawford/devcontainer-claude:latest",
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/jasoncrawford/devcontainer-claude/setup:1": {}
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}",
+    "VERCEL_TOKEN": "${localEnv:VERCEL_TOKEN}",
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
+  },
+  "waitFor": "postStartCommand"
+}
 ```
 
-Then:
+Then start:
 
 ```bash
-devcontainer up --workspace-folder /path/to/project
-devcontainer exec --workspace-folder /path/to/project claude --dangerously-skip-permissions
+devcontainer up --workspace-folder .
+devcontainer exec --workspace-folder . claude --dangerously-skip-permissions
 ```
 
 Install `devcontainer` CLI with `npm install -g @devcontainers/cli` if needed.
 
-## Template Location
+## Architecture
 
-`~/.devcontainer-template/` contains three files:
+Uses `jasoncrawford/devcontainer-claude` (published base image):
+- Pre-built Node 20 image — faster startup, no local build
+- Includes git, gh, zsh, Claude Code, brunel
+- Feature (`setup:1`) automatically provides:
+  - Network firewall (allowlist: GitHub, npm, Anthropic, VS Code, and custom domains)
+  - Mount strategy (skills, settings, projects, plugins, gitconfig)
+  - Container lifecycle (`post-create.sh`, `post-start.sh`)
+  - Auth seeding and isolation
 
-| File | Purpose | Customize? |
-|---|---|---|
-| `devcontainer.json` | Container config, mounts, env vars | Rarely — only the project name |
-| `Dockerfile` | Node 20, git, gh, zsh, Claude Code, firewall tools | No |
-| `init-firewall.sh` | Domain allowlist firewall | Yes — add project-specific domains |
+## For Projects Needing Extra System Packages
 
-## Mount Strategy
+Create `.devcontainer/Dockerfile` extending the base:
 
-This is the critical design decision. **Never bind-mount all of `~/.claude` read-write** — Claude Code overwrites `.claude.json` on startup when it can't find macOS Keychain auth, which corrupts the host config.
+```dockerfile
+FROM ghcr.io/jasoncrawford/devcontainer-claude:latest
+RUN apt-get update && apt-get install -y --no-install-recommends my-tool \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+```
 
-Instead, use selective mounts:
+Then in `devcontainer.json`, replace `image` with:
 
-| What | Mount type | Direction | Why |
-|---|---|---|---|
-| `~/.claude/skills` | bind (rw) | Bidirectional | Edit skills from either side |
-| `~/.claude/settings.json` | bind (rw) | Bidirectional | Settings stay in sync |
-| `~/.claude/projects` | bind (rw) | Bidirectional | Memory files sync |
-| `~/.claude/plugins` | bind (rw) | Bidirectional | Plugins available in container |
-| `~/.gitconfig` | bind (ro) | Host to container | Git identity for commits |
-| `~/.claude` | bind (ro) | Host to container | Seeds `.claude.json` on first start |
-| `.claude.json` state | Docker volume | Container only | Isolates runtime state from host |
+```json
+"build": {
+  "dockerfile": "Dockerfile"
+}
+```
 
-The `postStartCommand` uses `cp -n` to seed `.claude.json` from the read-only host mount into the volume on first start. The `-n` flag means it won't overwrite once the user logs in.
+## Firewall Customization
+
+For project-specific domains beyond GitHub/npm/Anthropic/VS Code defaults, create `.devcontainer/firewall-extras.txt`:
+
+```
+# Supabase
+your-project.supabase.co
+supabase.co
+api.supabase.com
+
+# Other services
+api.stripe.com
+```
+
+The `setup` feature reads this file and adds domains to the allowlist.
 
 ## Authentication
 
 ### Claude Code
-- User must log in once per project (per Docker volume)
-- Auth persists in the volume across container restarts
-- Volumes survive `docker rm` — only lost with `docker volume rm`
+- User logs in once per devcontainer (per Docker volume)
+- Auth persists across container restarts
+- Volume survives `docker rm` — only cleared with `docker volume rm`
 
 ### GitHub CLI
-- macOS Keychain tokens can't be forwarded to containers
-- Use `GH_TOKEN` env var via `${localEnv:GH_TOKEN}` in `containerEnv`
-- Store PAT in macOS Keychain, extract in `~/.zshrc`:
+- Store PAT in macOS Keychain:
 
 ```bash
-# Store once:
 security add-generic-password -a "$USER" -s "github-pat" -w "ghp_xxx"
-# In ~/.zshrc:
+```
+
+- Extract in shell profile (`~/.zshrc`):
+
+```bash
 export GH_TOKEN=$(security find-generic-password -a "$USER" -s "github-pat" -w 2>/dev/null)
 ```
 
-PAT needs: `repo`, `read:org` scopes (fine-grained, scoped to specific repos).
-
-## Firewall Customization
-
-Edit `init-firewall.sh` and add project-specific domains in the `for domain in` loop. Core domains (GitHub, npm, Claude API, Sentry, Statsig, VS Code) are already included.
-
-Example additions for a Supabase + Vercel + Resend project:
-
-```bash
-    "your-project.supabase.co" \
-    "supabase.co" \
-    "supabase.com" \
-    "api.supabase.com" \
-    "vercel.com" \
-    "api.vercel.com" \
-    "vercel.live" \
-    "api.resend.com" \
-```
+- Pass to container via `remoteEnv.GH_TOKEN` (already in quick-start config above)
 
 ## Container Lifecycle
 
 ```bash
-# Start (or restart existing)
+# Start (pulls pre-built image)
 devcontainer up --workspace-folder .
 
 # Run Claude
 devcontainer exec --workspace-folder . claude --dangerously-skip-permissions
 
-# Drop into shell
+# Shell
 devcontainer exec --workspace-folder . zsh
 
-# Stop
+# Full reset (loses auth, requires re-login)
 docker ps  # find container ID
-docker stop <id>
-
-# Full reset (loses auth, must re-login)
 docker stop <id> && docker rm <id>
-docker volume ls | grep claude-state  # find volume
-docker volume rm <volume-name>
+docker volume rm <name>-claude-state-<id>
 devcontainer up --workspace-folder .
 ```
 
-Idle containers use negligible resources. No need to stop/start routinely.
-
 ## Common Mistakes
 
-| Mistake | Consequence | Fix |
-|---|---|---|
-| Bind-mount all of `~/.claude` read-write | Host config corrupted on first start | Use selective mounts (see Mount Strategy) |
-| `ipset add` without `2>/dev/null \|\| true` | Firewall script fails on duplicate IPs | Add error suppression to both ipset loops |
-| Forget `--cap-add=NET_ADMIN,NET_RAW` | Firewall script can't set iptables rules | Include in `runArgs` |
-| Mount `~/.config/gh` for GitHub auth | Fails — token is in macOS Keychain, not file | Use `GH_TOKEN` env var instead |
-| Expect `docker rm` to clear volume | Volume persists, stale `.claude.json` blocks seeding | Use `docker volume rm` for full reset |
-| Skip `cp -n` seeding of `.claude.json` | Onboarding flow shown on every new project | Keep read-only host mount + `cp -n` in postStartCommand |
+| Mistake | Fix |
+|---|---|
+| Using local Dockerfile when base image works | Use published image + features. Add Dockerfile only if extra packages needed. |
+| Forgetting `remoteEnv` for auth tokens | Include all three: `GH_TOKEN`, `VERCEL_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` |
+| Binding mount all of `~/.claude` read-write | Feature manages mounts automatically. Don't add custom mounts. |
+| Trying to hardcode firewall domains | Use `.devcontainer/firewall-extras.txt`. Feature reads it automatically. |
+| Expect `docker rm` to clear volume | Use `docker volume rm` for full reset. |
