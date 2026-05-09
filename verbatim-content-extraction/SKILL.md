@@ -1,6 +1,6 @@
 ---
 name: verbatim-content-extraction
-description: Use when migrating or extracting content from a live website (WordPress, CMS, etc.) into markdown files or structured data. Prevents silent content corruption from LLM-mediated fetching.
+description: Use when migrating or extracting any content from a live website (WordPress, CMS, etc.) — markdown, structured data, or SVGs/icons/logos — that must be preserved verbatim. Prevents silent content corruption from LLM-mediated fetching or from the LLM "copying" inline SVG path data into string literals (which silently truncates).
 ---
 
 # Verbatim Content Extraction
@@ -85,6 +85,24 @@ async function extractPost(url, slug) {
   ].join('\n'));
 }
 ```
+
+## SVGs Are Content Too
+
+Inline SVGs — especially the long `<path d="M10.4013 27.311H41.78..."/>` numeric coordinate strings inside logos, icons, and decorative graphics — are exactly the kind of content the LLM corrupts when used as a copying channel. **The corruption looks like the SVG itself: just shorter.**
+
+The failure mode isn't WebFetch this time; it's the LLM "remembering" or "copying" inline SVG into a string literal. Even when looking right at the source, the model truncates after a few hundred characters of path data. The result still parses and renders — it just renders a fragment of the original (e.g. the logo's outer shape but not the wordmark, or the star pattern's first few points but not the full grid). The diff against the live site looks like a layout bug.
+
+**Extract SVGs the same way you extract markdown:** `curl` + DOM parse, save the raw `<svg>...</svg>` as a static file (e.g. `*.svg.html`), and inject via a raw-text loader (`import svg from './foo.svg.html?raw'` in Vite/Astro, `fs.readFileSync` in Node, etc.). Never paste SVG path data into a string literal.
+
+```js
+// Same pipeline as content extraction — the LLM never touches the path data.
+const html = await fetch(url).then(r => r.text());
+const dom = new JSDOM(html);
+const svg = dom.window.document.querySelector('svg.target-logo').outerHTML;
+await fs.writeFile('src/components/svg/logo.svg.html', svg);
+```
+
+The same principle applies to anything else opaque-to-humans and longer than a few hundred characters: minified scripts, base64 data URIs, font subset blobs. If you can't visually verify it's correct, treat it as content and pipe it through a script.
 
 ## WordPress-Specific Notes
 
